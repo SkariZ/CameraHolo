@@ -379,48 +379,20 @@ class MainWindow(QMainWindow):
             self.c_p['video_name'] = text + '_video' + str(self.video_idx)
             print(f"Filename is now {text}")
 
-    def save_position(self):
-        if not self.c_p['minitweezers_connected']:
-            x = self.c_p['stepper_current_position'][0]
-            y = self.c_p['stepper_current_position'][1]
-            z = 0
-        else:
-            x = self.data_channels['Motor_x_pos'].get_data(1)[0]
-            y = self.data_channels['Motor_y_pos'].get_data(1)[0]
-            z = self.data_channels['Motor_z_pos'].get_data(1)[0]
-
-        text, ok = QInputDialog.getText(self, 'Save position dialog', 'Enter name of position:')
-        if ok:
-            self.c_p['saved_positions'].append([text, x, y, z])
-            print(f"Saved position {x}, {y} as position: {text}")
-            self.add_position(len(self.c_p['saved_positions'])-1)
-        else:
-            print("No position saved")
-
-    def goto_position(self,idx):
-        if idx>len(self.c_p['saved_positions']):
-            return
-        # TODO make it use same code for both the options for the motors
-        if self.c_p['minitweezers_connected']:
-            self.c_p['minitweezers_target_pos'][0] = self.c_p['saved_positions'][idx][1]
-            self.c_p['minitweezers_target_pos'][1] = self.c_p['saved_positions'][idx][2]
-            self.c_p['minitweezers_target_pos'][2] = self.c_p['saved_positions'][idx][3]
-            self.c_p['move_to_location'] = True
-        else:
-            self.c_p['stepper_target_position'][0:2] = self.c_p['saved_positions'][idx][1:3]
 
     def drop_down_window_menu(self):
         # Create windows drop down menu
         window_menu = self.menu.addMenu("Windows")
         window_menu.addSeparator()
 
+        # Add command to open the live plotting window
         self.open_plot_window = QAction("Live plotter", self)
         self.open_plot_window.setToolTip("Open live plotting window.")
         self.open_plot_window.triggered.connect(self.show_new_window)
         self.open_plot_window.setCheckable(False)
         window_menu.addAction(self.open_plot_window)
 
-        
+        # Add command to open another window...
 
     def set_video_format(self, video_format):
         self.c_p['video_format'] = video_format
