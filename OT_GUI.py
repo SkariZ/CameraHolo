@@ -36,7 +36,7 @@ from ControlParameters import default_c_p, get_data_dicitonary_new
 from LivePlots import PlotWindow
 from SaveDataWidget import SaveDataWindow
 #from PIStage import PIStageThread
-from PIStageWidget import PIStageWidget
+#from PIStageWidget import PIStageWidget
 #import MotorControlWidget
 #from LaserPiezosControlWidget import LaserPiezoWidget, MinitweezersLaserMove
 #from DeepLearningThread import MouseAreaSelect, DeepLearningAnalyserLDS, DeepLearningControlWidget
@@ -112,7 +112,6 @@ class Worker(QThread):
             self.qp.drawEllipse(x-int(rx/2)-1, y-int(ry/2)-1, rx, ry)
     
     def preprocess_image(self):
-
         # Check if offset and gain should be applied.
         if self.c_p['image_offset'] != 0:
             self.image += int(self.c_p['image_offset'])
@@ -164,7 +163,7 @@ class Worker(QThread):
             W, H = self.c_p['frame_size']
             
             self.c_p['image_scale'] = max(self.image.shape[1]/W, self.image.shape[0]/H)
-            
+
             self.preprocess_image()
             
             # It is quite sensitive to the format here, won't accept any missmatch
@@ -201,11 +200,14 @@ class Worker(QThread):
 
 
 class MainWindow(QMainWindow):
+    """
+    Main window of the program. It contains the menu bar and the main widget.
+    """
 
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        self.setWindowTitle("Optical tweezers: Main window")
+        self.setWindowTitle("Main window")
         self.c_p = default_c_p()
         self.data_channels = get_data_dicitonary_new()
         self.video_idx = 0
@@ -226,45 +228,7 @@ class MainWindow(QMainWindow):
         except Exception as E:
             print(f"Camera error!\n{E}")
         #self.TemperatureThread = None
-        """
-        try:
-            self.TemperatureThread = TemperatureThread(1,'Temperature Thread',
-                                                       self.c_p, self.data_channels)
-            #(self, threadID, name, c_p, temperature_controller=None, max_diff=0.05)
-            self.TemperatureThread.start()
-        except Exception as E:
-            print(E)
-        
-        try:
-            self.PiezoThread = PIStageThread(3, "PI piezo thread", self.c_p)
-            self.PiezoThread.start()
-        except Exception as E:
-            print(E)
-
-        """
-        self.PortentaReaderT = None
-        try:
-            
-            self.PortentaReaderT = PortentaComms(self.c_p, self.data_channels) #PicReader(self.c_p, self.data_channels)
-            self.PortentaReaderT.start()
-            sleep(0.1)
-            """
-            self.PICReaderT = PicReader(self.c_p, self.data_channels)
-            self.PICReaderT.start()
-            self.PICWriterT = PicWriter(self.c_p, self.PICReaderT.serial_channel)
-            self.PICWriterT.start()
-            """
-            
-        except Exception as E:
-            print(E)
-
-        try:
-            self.AotuControllerThread = AutoController.autoControllerThread(self.c_p, self.data_channels)
-            self.AotuControllerThread.start()
-            print("Auto controller started")
-        except Exception as E:
-            print(E)
-
+       
         self.VideoWriterThread = VideoWriterThread(2, 'video thread', self.c_p)
         self.VideoWriterThread.start()
 
@@ -300,7 +264,7 @@ class MainWindow(QMainWindow):
         self.menu = self.menuBar()
         self.create_filemenu()
         self.drop_down_window_menu()
-        self.action_menu()
+        #self.action_menu()
         self.show()
 
     @pyqtSlot(QImage)
@@ -313,12 +277,6 @@ class MainWindow(QMainWindow):
     def create_mouse_toolbar(self):
         # Here is where all the tools in the mouse toolbar are added
         self.c_p['click_tools'].append(CameraClicks(self.c_p))
-        #self.c_p['click_tools'].append(MotorControlWidget.MinitweezersMouseMove(self.c_p, self.data_channels))
-        #self.c_p['click_tools'].append(MotorControlWidget.MotorClickMove(self.c_p,)) # Thorlabs motors
-        #self.c_p['click_tools'].append(MinitweezersLaserMove(self.c_p))
-        #self.c_p['click_tools'].append(MouseAreaSelect(self.c_p))
-        #self.c_p['click_tools'].append(AutoController.SelectLaserPosition(self.c_p))
-
         self.c_p['mouse_params'][5] = 0
 
         self.mouse_toolbar = QToolBar("Mouse tools")
@@ -412,28 +370,6 @@ class MainWindow(QMainWindow):
         print(f"Saving data to {path}")
         np.save(path,  self.data_channels, allow_pickle=True)
 
-    def action_menu(self):
-        action_menu = self.menu.addMenu("Actions")
-
-        self.save_position_action = QAction("Save position", self)
-        self.save_position_action.setStatusTip("Save current position")
-        self.save_position_action.triggered.connect(self.save_position)
-        action_menu.addAction(self.save_position_action)
-
-        self.saved_positions_submenu = action_menu.addMenu("Saved positions")
-
-        for idx in range(len(self.c_p['saved_positions'])):
-            self.add_position(idx)
-
-    def add_position(self,idx):
-        # Adds position to submenu
-        position_command = partial(self.goto_position, idx)
-        position_action = QAction(self.c_p['saved_positions'][idx][0], self)
-        position_action.setStatusTip(f"Move to saved position {self.c_p['saved_positions'][idx][0]}")
-        position_action.triggered.connect(position_command)
-        self.saved_positions_submenu.addAction(position_action) # Check how to remove this
-        # TODO add a remove position option as well as rename and check position values.
-
     def set_default_filename(self):
         text, ok = QInputDialog.getText(self, 'Filename dialog', 'Enter name of your files:')
         if ok:
@@ -485,66 +421,9 @@ class MainWindow(QMainWindow):
         window_menu.addAction(self.open_plot_window)
 
         
-        self.open_motor_window = QAction("Minitweezers motor window", self)
-        self.open_motor_window.setToolTip("Open window for manual motor control.")
-        self.open_motor_window.triggered.connect(self.open_motor_control_window)
-        self.open_motor_window.setCheckable(False)
-        window_menu.addAction(self.open_motor_window)
-
-        self.open_thorlabsM_window = QAction("Thorlabs motor window", self)
-        self.open_thorlabsM_window.setToolTip("Open window for manual motor control, thorlabs motors.")
-        self.open_thorlabsM_window.triggered.connect(self.open_thorlabs_motor_control_window)
-        self.open_thorlabsM_window.setCheckable(False)
-        window_menu.addAction(self.open_thorlabsM_window)
-
-        self.open_deep_window = QAction("DL window", self)
-        self.open_deep_window.setToolTip("Open window for deep learning control.")
-        self.open_deep_window.triggered.connect(self.OpenDeepLearningWindow)
-        self.open_deep_window.setCheckable(False)
-        window_menu.addAction(self.open_deep_window)
-
-        self.open_laser_piezo_window_action = QAction("Laser piezos window", self)
-        self.open_laser_piezo_window_action.setToolTip("Open window controlling piezos of lasers.")
-        self.open_laser_piezo_window_action.triggered.connect(self.OpenLaserPiezoWidget)
-        self.open_laser_piezo_window_action.setCheckable(False)
-        window_menu.addAction(self.open_laser_piezo_window_action)
-
-        self.open_plankton_window = QAction("Plankton viewer", self)
-        self.open_plankton_window.setToolTip("Open plankton viewer window.")
-        self.open_plankton_window.triggered.connect(self.openPlanktonViwer)
-        self.open_plankton_window.setCheckable(False)
-        window_menu.addAction(self.open_plankton_window)
-
-        
-        self.open_channel_viewer = QAction("Data channels", self)
-        self.open_channel_viewer.setToolTip("Opens a separate window in which the current values \n of the data channels is displayed.")
-        self.open_channel_viewer.triggered.connect(self.open_channels_winoow)
-        self.open_channel_viewer.setCheckable(False)
-        window_menu.addAction(self.open_channel_viewer)
-
-        self.auto_controller_action = QAction("Auto controller", self)
-        self.auto_controller_action.setToolTip("Opens a window for interfacing the auto controller.")
-        self.auto_controller_action.triggered.connect(self.openAutoControllerWidnow)
-        self.auto_controller_action.setCheckable(False)
-        window_menu.addAction(self.auto_controller_action)
-
-    def openPlanktonViwer(self):
-        self.planktonView = PlanktonViewer(self.c_p)
-
-    def open_channels_winoow(self):
-        self.channelView = CurrentValueWindow(self.c_p, self.data_channels)
-        self.channelView.show()
 
     def set_video_format(self, video_format):
         self.c_p['video_format'] = video_format
-
-    def open_motor_control_window(self):
-        self.MCW = MotorControlWidget.MotorControllerWindow(self.c_p) #MotorControlWidget.ThorlabsMotorWindow(self.c_p) #
-        self.MCW.show()
-
-    def open_thorlabs_motor_control_window(self):
-        self.MCW_T = MotorControlWidget.ThorlabsMotorWindow(self.c_p)
-        self.MCW_T.show()
 
     def set_image_format(self, image_format):
         self.c_p['image_format'] = image_format
@@ -620,8 +499,6 @@ class MainWindow(QMainWindow):
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mousePress()
 
     def mouseReleaseEvent(self, e):
-
-
         self.c_p['mouse_params'][3] = e.pos().x()-self.label.pos().x()
         self.c_p['mouse_params'][4] = e.pos().y()-self.label.pos().y()
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseRelease()
@@ -644,29 +521,10 @@ class MainWindow(QMainWindow):
 
         self.plot_windows[-1].show()
 
-    def OpenTemperatureWindow(self):
-        self.temp_control_window = TempereatureControllerWindow(self.c_p)
-        self.temp_control_window.show()
-        
-    def OpenPIStage(self):
-        self.PI_window = PIStageWidget(self.c_p)
-        self.PI_window.show()
-
-    def openAutoControllerWidnow(self):
-        self.auto_controller_window = AutoController.AutoControlWidget(self.c_p)
-        self.auto_controller_window.show()
 
     def DataWindow(self):
         self.data_window= SaveDataWindow(self.c_p, self.data_channels)
         self.data_window.show()
-
-    def OpenDeepLearningWindow(self):
-        self.dep_learning_window = DeepLearningControlWidget(self.c_p)
-        self.dep_learning_window.show()
-
-    def OpenLaserPiezoWidget(self):
-        self.laser_piezo_window = LaserPiezoWidget(self.c_p)
-        self.laser_piezo_window.show()
 
     def closeEvent(self, event):
         # TODO close also other widgets here
@@ -680,17 +538,6 @@ class MainWindow(QMainWindow):
         # TODO organize this better
         if self.CameraThread is not None:
             self.CameraThread.join()
-#        if self.TemperatureThread is not None:
-#            self.TemperatureThread.join()
-#        if self.PortentaReaderT is not None:
-#            self.PortentaReaderT.join()
-#        if self.PICReaderT is not None:
-#            self.PICReaderT.join()
-#        if self.PICWriterT is not None:
-#            self.PICWriterT.join()
-
-#        self.DeepThread.join()
-
         self.VideoWriterThread.join()
 
 def create_camera_toolbar_external(main_window):
