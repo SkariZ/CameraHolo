@@ -47,7 +47,7 @@ class BaslerCamera(CameraInterface):
             self.cam.Open()
             self.cam.ImageFileMode = "On"
             self.cam.TestImageSelector = "Off"
-            self.cam.ImageFilename = r"C:\Users\Fredrik\Desktop\O\test_data" 
+            self.cam.ImageFilename = "test_data/" 
             self.cam.PixelFormat = "Mono8"
             
             sleep(0.2)

@@ -1,0 +1,14 @@
+#Ignore all files in the following directories
+
+#Directories
+Results/*
+__pycache__/*
+
+#Ignore directory all together
+__pycache__/
+
+
+#Files
+*.pyc
+*.npy
+*.txt
