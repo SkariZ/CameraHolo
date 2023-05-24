@@ -141,7 +141,7 @@ class Worker(QThread):
         self.red_pen.setColor(QColor('red'))
         self.red_pen.setWidth(2)
 
-        buffer = []
+        #buffer = []
         while True:
             if self.test_mode:
                 self.testDataUpdate()
@@ -153,12 +153,12 @@ class Worker(QThread):
                 print("Frame missed!")
             
             #Subtract subsuquent frames to get the difference
-            if self.c_p['image'] is not None:
-                if len(buffer) == 0:
-                    buffer.append(self.image)
-                else:
-                    self.image = self.image - buffer.pop(0)
-                    buffer.append(self.image)
+            #if self.c_p['image'] is not None:
+            #    if len(buffer) == 0:
+            #        buffer.append(self.image)
+            #    else:
+            #        self.image = self.image - buffer.pop(0)
+            #        buffer.append(self.image)
 
 
             W, H = self.c_p['frame_size']
@@ -197,6 +197,8 @@ class Worker(QThread):
             self.qp.end()
             self.changePixmap.emit(picture)
 
+            
+
 
 class MainWindow(QMainWindow):
 
@@ -219,7 +221,6 @@ class MainWindow(QMainWindow):
             
             if camera is not None:
                 self.CameraThread = CameraThread(self.c_p, camera)
-                print("hej")
 
                 self.CameraThread.start()
         except Exception as E:
@@ -276,8 +277,8 @@ class MainWindow(QMainWindow):
         #H = int(1080/4)
         #W = int(1920/4)
         H=int(1024/4)
-
         W=int(1024/4)
+
         sleep(0.5)
         self.c_p['frame_size'] = int(self.c_p['camera_width']/2), int(self.c_p['camera_height']/2)
         self.label = QLabel("Hello")
