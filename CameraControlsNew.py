@@ -145,7 +145,7 @@ class CameraThread(Thread):
         
         self.camera.cam.AcquisitionFrameRateEnable = False
         # self.camera.cam.AcquisitionFrameRate = 11 
-        print("Framrate ", self.camera.cam.ResultingFrameRateAbs())
+        print("Framrate ", self.camera.cam.ResultingFrameRate())
         
         # Zoom out
         self.c_p['AOI'] = [0, self.c_p['camera_width'], 0,
@@ -165,13 +165,25 @@ class CameraThread(Thread):
     def run(self):
         self.c_p['exposure_time'] = self.camera.get_exposure_time()
         count = 0
+        self.buffer=[]
         while self.c_p['program_running']:
             if self.c_p['new_settings_camera'][0]:
                 self.update_camera_settings()
             count += 1
             if count % 20 == 5:
                 p_t = perf_counter()
-            self.c_p['image'] = self.camera.capture_image()
+            img=self.camera.capture_image()
+            if len(self.buffer)<5:
+                self.buffer.append(img)
+            else:
+                self.buffer.pop(0)
+                self.buffer.append(img)
+                
+            if self.c_p['SubtractionMode']:
+                self.c_p['image']= self.buffer[-1]-np.mean(np.array(self.buffer)[:-1],axis=0)
+            else:
+                self.c_p['image'] = self.buffer[-1]
+
             if self.c_p['image'] is None:
                 print("None image error!!?!?")
             if self.c_p['recording']:
@@ -181,6 +193,7 @@ class CameraThread(Thread):
                                              self.c_p['video_format']])
             if count % 20 == 15:
                 self.c_p['fps'] = 10 / (perf_counter()-p_t)
+                
 
 
 class VideoFormatError(Exception):

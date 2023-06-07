@@ -150,16 +150,7 @@ class Worker(QThread):
                 #print(self.c_p['fps'])
             else:
                 print("Frame missed!")
-            
-            #Subtract subsuquent frames to get the difference
-            #if self.c_p['image'] is not None:
-            #    if len(buffer) == 0:
-            #        buffer.append(self.image)
-            #    else:
-            #        self.image = self.image - buffer.pop(0)
-            #        buffer.append(self.image)
-
-
+    
             W, H = self.c_p['frame_size']
             
             self.c_p['image_scale'] = max(self.image.shape[1]/W, self.image.shape[0]/H)
@@ -196,8 +187,7 @@ class Worker(QThread):
             self.qp.end()
             self.changePixmap.emit(picture)
 
-            
-
+    
 
 class MainWindow(QMainWindow):
     """
@@ -215,26 +205,19 @@ class MainWindow(QMainWindow):
         self.CameraThread = None
         try:
             camera = None
-            
             camera = BaslerCameras.BaslerCamera()
-            
-            # camera if there is no camera connected.
-            # camera = ThorlabsCameras.ThorlabsCamera()
             
             if camera is not None:
                 self.CameraThread = CameraThread(self.c_p, camera)
 
                 self.CameraThread.start()
+
         except Exception as E:
             print(f"Camera error!\n{E}")
         #self.TemperatureThread = None
        
         self.VideoWriterThread = VideoWriterThread(2, 'video thread', self.c_p)
         self.VideoWriterThread.start()
-
-#        self.DeepThread = DeepLearningAnalyserLDS(self.c_p)
-#        self.DeepThread.start()
-
         self.plot_windows = None
 
         # Set up camera window
@@ -420,6 +403,12 @@ class MainWindow(QMainWindow):
                    self.c_p['camera_height']]
         self.c_p['new_settings_camera'] = [True, 'AOI']
 
+    def SubtractionMode(self):
+        self.c_p['SubtractionMode'] = not self.c_p['SubtractionMode']
+
+    def get_fps(self):
+        self.frame_rate_label.setText("Frame rate: %d\n" % self.c_p['fps'])# str(main_window.c_p['fps']))
+
     def ToggleRecording(self):
         # Turns on/off recording
         # Need to add somehting to indicate the number of frames left to save when recording.
@@ -523,6 +512,11 @@ def create_camera_toolbar_external(main_window):
     main_window.zoom_action.triggered.connect(main_window.ZoomOut)
     main_window.zoom_action.setCheckable(False)
 
+    main_window.subtraction_action = QAction("Subtraction mode", main_window)
+    main_window.subtraction_action.setToolTip("Switches to subtraction mode.")
+    main_window.subtraction_action.triggered.connect(main_window.SubtractionMode)
+    main_window.subtraction_action.setCheckable(True)
+
     main_window.record_action = QAction("Record video", main_window)
     main_window.record_action.setToolTip("Turn ON recording.")
     main_window.record_action.setShortcut('Ctrl+R')
@@ -542,6 +536,7 @@ def create_camera_toolbar_external(main_window):
     main_window.camera_toolbar.addAction(main_window.zoom_action)
     main_window.camera_toolbar.addAction(main_window.record_action)
     main_window.camera_toolbar.addAction(main_window.snapshot_action)
+    main_window.camera_toolbar.addAction(main_window.subtraction_action)
 
     main_window.exposure_time_LineEdit = QLineEdit()
     main_window.exposure_time_LineEdit.setValidator(QDoubleValidator(0.99,99.99,2))

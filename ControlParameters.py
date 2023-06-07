@@ -67,7 +67,7 @@ def default_c_p():
                             #'Motor_x_speed', 'Motor_y_speed', 'Motor_z_speed',
                             'T_time','Time_micros_high','Time_micros_low',
                            ],
-                           
+            'SubtractionMode':False,
            # Temporary solution to use both PIC and Portenta
            'old_pic_channels':[
                             'PSD_A_P_X', 'PSD_A_P_Y', 'PSD_A_P_sum',

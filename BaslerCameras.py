@@ -21,16 +21,19 @@ class BaslerCamera(CameraInterface):
         self.is_grabbing = False
 
     def capture_image(self):
+        
         if not self.is_grabbing:
             self.cam.StartGrabbing(pylon.GrabStrategy_OneByOne)
             self.is_grabbing = True
         try:
             
             with self.cam.RetrieveResult(3000) as result: # 3000
+
                 self.img.AttachGrabResultBuffer(result)
                 if result.GrabSucceeded():
                     # Consider if we need to put directly in c_p?
                     image = np.uint8(self.img.GetArray()[:1024,:1024])
+                    
                     #self.img.Release()
                     
                     return image
@@ -40,21 +43,23 @@ class BaslerCamera(CameraInterface):
     def connect_camera(self):
         try:
             
-            os.environ["PYLON_CAMEMU"] = "1"
+            #os.environ["PYLON_CAMEMU"] = "1"
 
             tlf = pylon.TlFactory.GetInstance()
             self.cam = pylon.InstantCamera(tlf.CreateFirstDevice())
             self.cam.Open()
-            self.cam.ImageFileMode = "On"
-            self.cam.TestImageSelector = "Off"
-            self.cam.ImageFilename = "test_data2/" 
-            self.cam.PixelFormat = "Mono8"
+            
+            #self.cam.ImageFileMode = "On"
+            #self.cam.TestImageSelector = "Off"
+            #self.cam.ImageFilename = r"D:\SiO2_776nmEvery1_3\videos\figs"
+            #self.cam.PixelFormat = "Mono8"
             
             sleep(0.2)
             return True
         except Exception as ex:
             self.cam = None
             print(ex)
+            
             return False
         
     def disconnect_camera(self):
@@ -106,16 +111,16 @@ class BaslerCamera(CameraInterface):
     def set_exposure_time(self, exposure_time):
         self.stop_grabbing()
         try:
-            self.cam.ExposureTimeAbs = exposure_time
+            self.cam.ExposureTime = exposure_time
 
         except Exception as ex:
             print(f"Exposure time not accepted by camera, {ex}")
     def get_exposure_time(self):
 
-        return self.cam.ExposureTimeAbs()
+        return self.cam.ExposureTime()
 
     def get_fps(self):
-        fps = round(float(self.cam.ResultingFrameRateAbs.GetValue()), 1)
+        fps = round(float(self.cam.ResultingFrameRate.GetValue()), 1)
         return fps
 
     def get_sensor_size(self):
