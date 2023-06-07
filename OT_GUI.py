@@ -35,6 +35,7 @@ from ControlParameters import default_c_p, get_data_dicitonary_new
 #from ReadPicUart import PicReader, PicWriter
 from LivePlots import PlotWindow
 from SaveDataWidget import SaveDataWindow
+from DataAnalytics import DataAnalytics
 #from PIStage import PIStageThread
 #from PIStageWidget import PIStageWidget
 #import MotorControlWidget
@@ -158,7 +159,6 @@ class Worker(QThread):
             self.preprocess_image()
             
             # It is quite sensitive to the format here, won't accept any missmatch
-            
             if len(np.shape(self.image)) < 3:
                 QT_Image = QImage(self.image, self.image.shape[1],
                                        self.image.shape[0],
@@ -187,7 +187,6 @@ class Worker(QThread):
             self.qp.end()
             self.changePixmap.emit(picture)
 
-    
 
 class MainWindow(QMainWindow):
     """
@@ -376,6 +375,12 @@ class MainWindow(QMainWindow):
         window_menu.addAction(self.open_plot_window)
 
         # Add command to open another window...
+        self.open_data_window = QAction("Data analytics", self)
+        self.open_data_window.setToolTip("Open window for data analytics.")
+        self.open_data_window.triggered.connect(self.show_data_analytics_window)
+        self.open_data_window.setCheckable(False)
+        window_menu.addAction(self.open_data_window)
+
 
     def set_video_format(self, video_format):
         self.c_p['video_format'] = video_format
@@ -422,7 +427,6 @@ class MainWindow(QMainWindow):
 
     def snapshot(self):
         # Captures a snapshot of what the camera is viewing and saves that
-        # in the fileformat specified by the image_format parameter.
         idx = str(self.c_p['image_idx'])
         filename = self.c_p['recording_path'] + '/'+self.c_p['filename']+'image_' + idx +'.'+\
             self.c_p['image_format']
@@ -447,7 +451,6 @@ class MainWindow(QMainWindow):
 
 
     def mousePressEvent(self, e):
-        
         self.c_p['mouse_params'][1] = e.pos().x()-self.label.pos().x()
         self.c_p['mouse_params'][2] = e.pos().y()-self.label.pos().y()
 
@@ -475,12 +478,19 @@ class MainWindow(QMainWindow):
 
 
     def show_new_window(self, checked):
+
         if self.plot_windows is None:
             self.plot_windows = []
-        self.plot_windows.append(PlotWindow(self.c_p, data=self.data_channels, #data=get_data_dicitonary(), # Major change here
+
+        self.plot_windows.append(PlotWindow(self.c_p, data=self.data_channels, 
                                           x_keys=['Time','Time'], y_keys=['X-force','Y-position']))
 
         self.plot_windows[-1].show()
+
+    def show_data_analytics_window(self, checked):
+
+        self.data_analytics_window = DataAnalytics(self.c_p)
+        self.data_analytics_window.show()
 
 
     def DataWindow(self):
@@ -492,7 +502,6 @@ class MainWindow(QMainWindow):
         if self.plot_windows is not None:
             for w in self.plot_windows:
                 w.close()
-
 
     def __del__(self):
         self.c_p['program_running'] = False
