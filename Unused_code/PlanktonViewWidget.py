@@ -1,7 +1,7 @@
 import numpy as np
 from threading import Thread
 from time import sleep
-from CustomMouseTools import MouseInterface
+from Unused_code.CustomMouseTools import MouseInterface
 from PyQt6.QtGui import  QPixmap,QImage
 from PyQt6.QtWidgets import (
     QMainWindow, QCheckBox, QComboBox, QListWidget, QLineEdit,

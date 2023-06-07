@@ -33,7 +33,7 @@ from ControlParameters import default_c_p, get_data_dicitonary_new
 #from TemperatureControllerTED4015 import TemperatureThread
 #from TemperatureControllerWidget import TempereatureControllerWindow
 #from ReadPicUart import PicReader, PicWriter
-from LivePlots import PlotWindow
+#from LivePlots import PlotWindow
 from SaveDataWidget import SaveDataWindow
 from DataAnalytics import DataAnalytics
 #from PIStage import PIStageThread
@@ -132,7 +132,6 @@ class Worker(QThread):
         self.qp.drawEllipse(cx-int(rx/2)-1, cy-int(ry/2)-1, rx, ry)
 
     def run(self):
-
         # Initialize pens to draw on the images
         self.blue_pen = QPen()
         self.blue_pen.setColor(QColor('blue'))
@@ -141,14 +140,12 @@ class Worker(QThread):
         self.red_pen.setColor(QColor('red'))
         self.red_pen.setWidth(2)
 
-        #buffer = []
         while True:
             if self.test_mode:
                 self.testDataUpdate()
 
             if self.c_p['image'] is not None:
                 self.image = np.array(self.c_p['image'])
-                #print(self.c_p['fps'])
             else:
                 print("Frame missed!")
     
@@ -181,9 +178,10 @@ class Worker(QThread):
             # Draw zoom in rectangle
             self.c_p['click_tools'][self.c_p['mouse_params'][5]].draw(self.qp)
             self.qp.setPen(self.blue_pen)
-            self.draw_central_circle()
+
             if self.c_p['tracking_on']:
                 self.draw_particle_positions(self.c_p['predicted_particle_positions'])
+
             self.qp.end()
             self.changePixmap.emit(picture)
 
@@ -220,8 +218,6 @@ class MainWindow(QMainWindow):
         self.plot_windows = None
 
         # Set up camera window
-        #H = int(1080/4)
-        #W = int(1920/4)
         H=int(1024/4)
         W=int(1024/4)
 
@@ -313,7 +309,6 @@ class MainWindow(QMainWindow):
         image_format_submenu = file_menu.addMenu("Image format")
         image_formats = ['png','jpg','npy']
         for f in image_formats:
-
             format_command= partial(self.set_image_format, f)
             format_action = QAction(f, self)
             format_action.setStatusTip(f"Set recording format to {f}")
@@ -368,11 +363,11 @@ class MainWindow(QMainWindow):
         window_menu.addSeparator()
 
         # Add command to open the live plotting window
-        self.open_plot_window = QAction("Live plotter", self)
-        self.open_plot_window.setToolTip("Open live plotting window.")
-        self.open_plot_window.triggered.connect(self.show_new_window)
-        self.open_plot_window.setCheckable(False)
-        window_menu.addAction(self.open_plot_window)
+        #self.open_plot_window = QAction("Live plotter", self)
+        #self.open_plot_window.setToolTip("Open live plotting window.")
+        #self.open_plot_window.triggered.connect(self.show_new_window)
+        #self.open_plot_window.setCheckable(False)
+        #window_menu.addAction(self.open_plot_window)
 
         # Add command to open another window...
         self.open_data_window = QAction("Data analytics", self)
@@ -400,7 +395,6 @@ class MainWindow(QMainWindow):
         fname = QFileDialog.getExistingDirectory(self, "Save path")
         if len(fname) > 3:
             # If len is less than 3 then the action was cancelled and we should not update
-            # the path.
             self.c_p['recording_path'] = fname
 
     def ZoomOut(self):
@@ -435,7 +429,6 @@ class MainWindow(QMainWindow):
         else:
             cv2.imwrite(filename, cv2.cvtColor(self.c_p['image'],
                                            cv2.COLOR_RGB2BGR))
-
         self.c_p['image_idx'] += 1
 
     def resizeEvent(self, event):
@@ -477,18 +470,16 @@ class MainWindow(QMainWindow):
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseDoubleClick()
 
 
-    def show_new_window(self, checked):
+    #def show_new_window(self, checked):
+    #
+    #    if self.plot_windows is None:
+    #        self.plot_windows = []
 
-        if self.plot_windows is None:
-            self.plot_windows = []
-
-        self.plot_windows.append(PlotWindow(self.c_p, data=self.data_channels, 
-                                          x_keys=['Time','Time'], y_keys=['X-force','Y-position']))
-
-        self.plot_windows[-1].show()
+    #    self.plot_windows.append(PlotWindow(self.c_p, data=self.data_channels, 
+    #                                      x_keys=['Time','Time'], y_keys=['X-force','Y-position']))
+    #    self.plot_windows[-1].show()
 
     def show_data_analytics_window(self, checked):
-
         self.data_analytics_window = DataAnalytics(self.c_p)
         self.data_analytics_window.show()
 

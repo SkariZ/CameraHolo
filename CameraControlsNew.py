@@ -180,7 +180,10 @@ class CameraThread(Thread):
                 self.buffer.append(img)
                 
             if self.c_p['SubtractionMode']:
-                self.c_p['image']= self.buffer[-1]-np.mean(np.array(self.buffer)[:-1],axis=0)
+                try:
+                    self.c_p['image']= self.buffer[-1]-np.mean(np.array(self.buffer)[:-1], axis=0)
+                except:
+                    self.c_p['image']= self.buffer[-1]
             else:
                 self.c_p['image'] = self.buffer[-1]
 

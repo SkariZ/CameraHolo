@@ -12,7 +12,7 @@ import numpy as np
 from functools import partial
 from threading import Thread
 from ThorlabsMotor import MotorThreadV2, PiezoThread
-from CustomMouseTools import MouseInterface
+from Unused_code.CustomMouseTools import MouseInterface
 
 
 # Maybe have this as a QThread?

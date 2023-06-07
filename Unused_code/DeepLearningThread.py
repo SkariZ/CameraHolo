@@ -28,7 +28,7 @@ sys.path.append('C:/Users/Martin/OneDrive/PhD/AutOT/') # TODO move this to same 
 
 import find_particle_threshold as fpt
 from unet_model import UNet
-from CustomMouseTools import MouseInterface
+from Unused_code.CustomMouseTools import MouseInterface
 
 # TODO the main network should be able to have multiple DL threads each with
 # its own network alternatively we should have the thread capable of having 
