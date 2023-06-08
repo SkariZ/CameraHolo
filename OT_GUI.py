@@ -36,6 +36,7 @@ from ControlParameters import default_c_p, get_data_dicitonary_new
 #from LivePlots import PlotWindow
 from SaveDataWidget import SaveDataWindow
 from DataAnalytics import DataAnalytics
+from FieldRecon import FieldAnalytics
 #from PIStage import PIStageThread
 #from PIStageWidget import PIStageWidget
 #import MotorControlWidget
@@ -376,6 +377,13 @@ class MainWindow(QMainWindow):
         self.open_data_window.setCheckable(False)
         window_menu.addAction(self.open_data_window)
 
+        # Add command to open another window... 
+        self.open_field_recon_window = QAction("Field reconstruction", self)
+        self.open_field_recon_window.setToolTip("Open window for field reconstruction.")
+        self.open_field_recon_window.triggered.connect(self.show_field_analytics_window)
+        self.open_field_recon_window.setCheckable(False)
+        window_menu.addAction(self.open_field_recon_window)
+
 
     def set_video_format(self, video_format):
         self.c_p['video_format'] = video_format
@@ -483,6 +491,9 @@ class MainWindow(QMainWindow):
         self.data_analytics_window = DataAnalytics(self.c_p)
         self.data_analytics_window.show()
 
+    def show_field_analytics_window(self, checked):
+        self.field_analytics_window = FieldAnalytics(self.c_p)
+        self.field_analytics_window.show()
 
     def DataWindow(self):
         self.data_window= SaveDataWindow(self.c_p, self.data_channels)

@@ -50,7 +50,12 @@ class HistogramWidget(QWidget):
         self.ax.clear()
         if self.data is not None:
             histdata = self.data.flatten()#np.random.choice(self.data.flatten(), 50000) # For faster plotting
-            self.ax.hist(histdata, bins=np.arange(0, 255), color='darkblue', alpha=0.7)
+            #Check if histdata is uint8
+            if histdata[0].dtype == np.uint8:
+                self.ax.hist(histdata, bins=np.arange(0, 255), color='darkblue', alpha=0.7)
+            else:
+                self.ax.hist(histdata, bins=100, color='darkblue', alpha=0.7)
+
         self.ax.set_xlabel('Value')
         self.ax.set_ylabel('Frequency')
         self.fig.tight_layout()
@@ -78,41 +83,14 @@ class ImageWidgetFFT(QWidget):
     def update_image(self):
         self.ax.clear()
         if self.image is not None:
-            fft_img = np.abs(np.fft.fft2(self.image))
+            fft_img = np.abs(np.fft.fftshift(np.fft.fft2(self.image)))
             self.ax.imshow(np.log10(fft_img, out=np.zeros_like(fft_img), where=(fft_img!=0)), cmap='gray')
         #self.ax.axis('off')
         self.ax.set_xlabel('FFT Image')
         self.fig.tight_layout()
         self.canvas.draw()
 
-class ImageWidgetPhase(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.image = None
-        
-        self.fig = Figure()
-        self.canvas = FigureCanvas(self.fig)
-        self.ax = self.fig.add_subplot(111)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.canvas)
-        self.setLayout(layout)
-        
-        self.update_image()
-
-    def update_data(self, new_data):
-        self.image = new_data
-        self.update_image()
-
-    def update_image(self):
-        self.ax.clear()
-        if self.image is not None:
-            angle_img = np.angle(self.image)
-            self.ax.imshow(angle_img, cmap='gray')
-        #self.ax.axis('off')
-        self.ax.set_xlabel('Phase Image')
-        self.fig.tight_layout()
-        self.canvas.draw()    
 
 class DataAnalytics(QMainWindow):
     def __init__(self, c_p):
@@ -122,13 +100,11 @@ class DataAnalytics(QMainWindow):
 
         self.histogram_widget = HistogramWidget()
         self.image_widget_fft = ImageWidgetFFT()
-        self.image_widget_phase = ImageWidgetPhase()
 
         #Define Side-by-side layout
         layout = QHBoxLayout()
         layout.addWidget(self.histogram_widget)
         layout.addWidget(self.image_widget_fft)
-        layout.addWidget(self.image_widget_phase)
 
         #Add the layout to the container
         container = QWidget()
@@ -158,13 +134,6 @@ class DataAnalytics(QMainWindow):
         self.toggle_image_action.triggered.connect(self.toggle_image_fft)
         self.toolbar.addAction(self.toggle_image_action)
 
-        #Add a button to toggle the image Phase
-        self.toggle_image_action = QAction("Toggle Image Phase", self)
-        self.toggle_image_action.setCheckable(True)
-        self.toggle_image_action.setChecked(True)
-        self.toggle_image_action.triggered.connect(self.toggle_image_phase)
-        self.toolbar.addAction(self.toggle_image_action)
-        
         #Add a button for closing the window
         self.close_action = QAction("Close window", self)
         self.close_action.triggered.connect(self.close)
@@ -182,12 +151,6 @@ class DataAnalytics(QMainWindow):
         else:
             self.image_widget_fft.hide()
 
-    def toggle_image_phase(self):
-        if self.toggle_image_action.isChecked():
-            self.image_widget_phase.show()
-        else:
-            self.image_widget_phase.hide()
-
     def close(self):
         self.timer.stop()
         self.hide()
@@ -195,7 +158,7 @@ class DataAnalytics(QMainWindow):
     def update_data(self, new_data):
         self.histogram_widget.update_data(new_data)
         self.image_widget_fft.update_data(new_data)
-        self.image_widget_phase.update_data(new_data)
+
 
 
 
