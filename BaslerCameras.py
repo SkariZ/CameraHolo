@@ -32,8 +32,8 @@ class BaslerCamera(CameraInterface):
                 self.img.AttachGrabResultBuffer(result)
                 if result.GrabSucceeded():
                     # Consider if we need to put directly in c_p?
-                    image = np.uint8(self.img.GetArray()[:1024,:1024])
-                    
+                    #image = np.uint8(self.img.GetArray()[:1024,:1024])
+                    image = np.uint8(self.img.GetArray())    
                     #self.img.Release()
                     
                     return image

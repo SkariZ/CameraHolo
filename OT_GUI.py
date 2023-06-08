@@ -226,7 +226,7 @@ class MainWindow(QMainWindow):
         self.label = QLabel("Hello")
         self.label.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setCentralWidget(self.label)
-        self.label.setMinimumSize(W,H)
+        self.label.setMinimumSize(W, H)
         self.painter = QPainter(self.label.pixmap())
         th = Worker(c_p=self.c_p, data=self.data_channels)
         th.changePixmap.connect(self.setImage)

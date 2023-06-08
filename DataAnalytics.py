@@ -50,7 +50,7 @@ class HistogramWidget(QWidget):
         self.ax.clear()
         if self.data is not None:
             histdata = self.data.flatten()#np.random.choice(self.data.flatten(), 50000) # For faster plotting
-            self.ax.hist(histdata, bins=80, color='darkblue', alpha=0.7)
+            self.ax.hist(histdata, bins=np.arange(0, 255), color='darkblue', alpha=0.7)
         self.ax.set_xlabel('Value')
         self.ax.set_ylabel('Frequency')
         self.fig.tight_layout()

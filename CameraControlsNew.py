@@ -172,8 +172,12 @@ class CameraThread(Thread):
             count += 1
             if count % 20 == 5:
                 p_t = perf_counter()
+
             img=self.camera.capture_image()
-            if len(self.buffer)<5:
+            #img = img[:self.c_p['camera_width'], :self.c_p['camera_height']]
+
+
+            if len(self.buffer)<self.c_p['SubtractionBuffer']:
                 self.buffer.append(img)
             else:
                 self.buffer.pop(0)
