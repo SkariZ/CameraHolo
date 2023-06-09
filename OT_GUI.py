@@ -399,6 +399,11 @@ class MainWindow(QMainWindow):
         self.c_p['exposure_time'] = float(self.exposure_time_LineEdit.text())
         self.c_p['new_settings_camera'] = [True, 'exposure_time']
 
+    def set_buffer_size_text(self):
+        # Updates the buffer size of the camera to what is inside the textbox
+        self.c_p['buffer_size'] = int(self.buffer_size_LineEdit.text())
+        self.c_p['new_settings_camera'] = [True, 'buffer_size']
+
     def set_save_path(self):
         fname = QFileDialog.getExistingDirectory(self, "Save path")
         if len(fname) > 3:
@@ -544,24 +549,36 @@ def create_camera_toolbar_external(main_window):
     main_window.set_exp_tim.setToolTip("Sets exposure time to the value in the textboox")
     main_window.set_exp_tim.triggered.connect(main_window.set_exposure_time)
 
+    #Window for setting buffer size
+    main_window.set_buffer_size = QAction("Set buffer size", main_window)
+    main_window.set_buffer_size.setToolTip("Sets buffer size to use when in subtraction mode")
+    main_window.set_buffer_size.triggered.connect(main_window.set_buffer_size_text)
+
     main_window.camera_toolbar.addAction(main_window.zoom_action)
     main_window.camera_toolbar.addAction(main_window.record_action)
     main_window.camera_toolbar.addAction(main_window.snapshot_action)
     main_window.camera_toolbar.addAction(main_window.subtraction_action)
 
     main_window.exposure_time_LineEdit = QLineEdit()
-    main_window.exposure_time_LineEdit.setValidator(QDoubleValidator(0.99,99.99,2))
     main_window.exposure_time_LineEdit.setText(str(main_window.c_p['exposure_time']))
-    main_window.camera_toolbar.addWidget(main_window.exposure_time_LineEdit)
+    main_window.exposure_time_LineEdit.setValidator(QDoubleValidator(0.99,99.99, 2))
     main_window.camera_toolbar.addAction(main_window.set_exp_tim)
+    main_window.camera_toolbar.addWidget(main_window.exposure_time_LineEdit)
+    
+    main_window.buffer_size_LineEdit = QLineEdit()
+    main_window.buffer_size_LineEdit.setValidator(QIntValidator(1,100))
+    main_window.buffer_size_LineEdit.setText(str(main_window.c_p['buffer_size']))
+    main_window.camera_toolbar.addAction(main_window.set_buffer_size)
+    main_window.camera_toolbar.addWidget(main_window.buffer_size_LineEdit)
+
 
     # TODO add offset and label to this        
-    main_window.gain_LineEdit = QLineEdit()
-    main_window.gain_LineEdit.setToolTip("Set software gain on displayed image.")
-    main_window.gain_LineEdit.setValidator(QDoubleValidator(0.1,3,3))
-    main_window.gain_LineEdit.setText(str(main_window.c_p['image_gain']))
-    main_window.gain_LineEdit.textChanged.connect(main_window.set_gain)
-    main_window.camera_toolbar.addWidget(main_window.gain_LineEdit)
+    #main_window.gain_LineEdit = QLineEdit()
+    #main_window.gain_LineEdit.setToolTip("Set software gain on displayed image.")
+    #main_window.gain_LineEdit.setValidator(QDoubleValidator(0.1,3,3))
+    #main_window.gain_LineEdit.setText(str(main_window.c_p['image_gain']))
+    #main_window.gain_LineEdit.textChanged.connect(main_window.set_gain)
+    #main_window.camera_toolbar.addWidget(main_window.gain_LineEdit)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

@@ -69,7 +69,7 @@ def default_c_p():
                            ],
                            
             'SubtractionMode':False,
-            'SubtractionBuffer': 8,
+            'buffer_size': 8,
 
            # Temporary solution to use both PIC and Portenta
            'old_pic_channels':[
