@@ -26,6 +26,7 @@ from PyQt6.QtCore import QTimer
 import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class HistogramWidget(QWidget):
     def __init__(self):
@@ -69,6 +70,7 @@ class ImageWidgetFFT(QWidget):
         self.fig = Figure()
         self.canvas = FigureCanvas(self.fig)
         self.ax = self.fig.add_subplot(111)
+        self.cax= make_axes_locatable(self.ax).append_axes('right', size='5%', pad=0.05)
 
         layout = QVBoxLayout()
         layout.addWidget(self.canvas)
@@ -84,7 +86,11 @@ class ImageWidgetFFT(QWidget):
         self.ax.clear()
         if self.image is not None:
             fft_img = np.abs(np.fft.fftshift(np.fft.fft2(self.image)))
-            self.ax.imshow(np.log10(fft_img, out=np.zeros_like(fft_img), where=(fft_img!=0)), cmap='gray')
+            imt = self.ax.imshow(np.log10(fft_img, out=np.zeros_like(fft_img), where=(fft_img!=0)), cmap='gray')
+
+            #Add colorbar
+            self.fig.colorbar(imt, cax=self.cax)
+
         #self.ax.axis('off')
         self.ax.set_xlabel('FFT Image')
         self.fig.tight_layout()

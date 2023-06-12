@@ -23,7 +23,7 @@ from random import randint
 import numpy as np
 from time import sleep
 from functools import partial
-import os
+import gc
 
 
 import BaslerCameras
@@ -216,7 +216,7 @@ class MainWindow(QMainWindow):
        
         self.VideoWriterThread = VideoWriterThread(2, 'video thread', self.c_p)
         self.VideoWriterThread.start()
-        self.plot_windows = None
+        self.widgets = []
 
         # Set up camera window
         H=int(1024/4)
@@ -229,6 +229,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.label)
         self.label.setMinimumSize(W, H)
         self.painter = QPainter(self.label.pixmap())
+
+        # Start camera thread
         th = Worker(c_p=self.c_p, data=self.data_channels)
         th.changePixmap.connect(self.setImage)
         th.start()
@@ -243,7 +245,6 @@ class MainWindow(QMainWindow):
         self.menu = self.menuBar()
         self.create_filemenu()
         self.drop_down_window_menu()
-        #self.action_menu()
         self.show()
 
     @pyqtSlot(QImage)
@@ -363,13 +364,6 @@ class MainWindow(QMainWindow):
         window_menu = self.menu.addMenu("Windows")
         window_menu.addSeparator()
 
-        # Add command to open the live plotting window
-        #self.open_plot_window = QAction("Live plotter", self)
-        #self.open_plot_window.setToolTip("Open live plotting window.")
-        #self.open_plot_window.triggered.connect(self.show_new_window)
-        #self.open_plot_window.setCheckable(False)
-        #window_menu.addAction(self.open_plot_window)
-
         # Add command to open another window...
         self.open_data_window = QAction("Data analytics", self)
         self.open_data_window.setToolTip("Open window for data analytics.")
@@ -482,33 +476,50 @@ class MainWindow(QMainWindow):
         print(x*self.c_p['image_scale'] ,y*self.c_p['image_scale'] )
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseDoubleClick()
 
-
-    #def show_new_window(self, checked):
-    #
-    #    if self.plot_windows is None:
-    #        self.plot_windows = []
-
-    #    self.plot_windows.append(PlotWindow(self.c_p, data=self.data_channels, 
-    #                                      x_keys=['Time','Time'], y_keys=['X-force','Y-position']))
-    #    self.plot_windows[-1].show()
-
     def show_data_analytics_window(self, checked):
         self.data_analytics_window = DataAnalytics(self.c_p)
         self.data_analytics_window.show()
+        self.widgets.append(self.data_analytics_window)
 
     def show_field_analytics_window(self, checked):
         self.field_analytics_window = FieldAnalytics(self.c_p)
         self.field_analytics_window.show()
+        self.widgets.append(self.field_analytics_window)
 
     def DataWindow(self):
         self.data_window= SaveDataWindow(self.c_p, self.data_channels)
         self.data_window.show()
+        self.widgets.append(self.data_window)
 
     def closeEvent(self, event):
-        # TODO close also other widgets here
-        if self.plot_windows is not None:
-            for w in self.plot_windows:
-                w.close()
+        #Close all widgets
+        self.close_all_widgets()
+
+    def close_all_widgets(self):
+        #Close all widgets
+        for widget in self.widgets:
+            widget.close()
+        self.widgets = []
+
+    def flush_memory(self):
+
+        #Close all widgets
+        for widget in self.widgets:
+            widget.close()
+
+            #Stop timers if they exist
+            try: widget.timer.stop() 
+            except: pass
+
+            #Hide widgets if they exist
+            try: widget.hide()
+            except: pass
+            
+
+        self.widgets = []
+
+        #Garbage Collector
+        gc.collect()
 
     def __del__(self):
         self.c_p['program_running'] = False
@@ -533,6 +544,11 @@ def create_camera_toolbar_external(main_window):
     main_window.subtraction_action.triggered.connect(main_window.SubtractionMode)
     main_window.subtraction_action.setCheckable(True)
 
+    main_window.flush_action = QAction("Flush memory", main_window)
+    main_window.flush_action.setToolTip("Flushes the memory(closes open widgets and clears data).")
+    main_window.flush_action.triggered.connect(main_window.flush_memory)
+    main_window.flush_action.setCheckable(True)
+
     main_window.record_action = QAction("Record video", main_window)
     main_window.record_action.setToolTip("Turn ON recording.")
     main_window.record_action.setShortcut('Ctrl+R')
@@ -554,11 +570,14 @@ def create_camera_toolbar_external(main_window):
     main_window.set_buffer_size.setToolTip("Sets buffer size to use when in subtraction mode")
     main_window.set_buffer_size.triggered.connect(main_window.set_buffer_size_text)
 
+    #Add actions to toolbar
     main_window.camera_toolbar.addAction(main_window.zoom_action)
     main_window.camera_toolbar.addAction(main_window.record_action)
     main_window.camera_toolbar.addAction(main_window.snapshot_action)
     main_window.camera_toolbar.addAction(main_window.subtraction_action)
+    main_window.camera_toolbar.addAction(main_window.flush_action)
 
+    #Add textboxes to toolbar - These are not actions but settable.
     main_window.exposure_time_LineEdit = QLineEdit()
     main_window.exposure_time_LineEdit.setText(str(main_window.c_p['exposure_time']))
     main_window.exposure_time_LineEdit.setValidator(QDoubleValidator(0.99,99.99, 2))

@@ -194,16 +194,17 @@ class ReconstructField(QWidget):
                 first_phase_background = []
                 )
             
+            #-----#Phase#-----#
             imt = self.ax.imshow(np.angle(self.image))
             self.ax.set_xlabel('Phase')
             self.fig.colorbar(imt, cax=self.cax)
 
-            #-----#
-
+            #-----#Background#-----#
             imt2 = self.ax2.imshow(self.bg)
             self.ax2.set_xlabel('Background')
             self.fig.colorbar(imt2, cax=self.cax2)
 
+            #-----#Update the canvas#-----#
             self.fig.tight_layout()
             self.canvas.draw()
 
