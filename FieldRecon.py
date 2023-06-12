@@ -107,7 +107,6 @@ def imgtofield(img,
     #Correct E_field again
     E_field_corr2 = E_field_corr * np.exp(- 1j * np.median(phase_img2 + np.pi - 1))
     
-
     #Focus the field
     if np.abs(z_prop) > 0:  
         E_field_corr2 = UZ.refocus_field_z(E_field_corr2, z_prop, padding = 256)
@@ -119,7 +118,7 @@ class ReconstructField(QWidget):
         super().__init__()
         self.image = None
         self.precalculated = False
-
+        
         self.fig = Figure()
         self.canvas = FigureCanvas(self.fig)
         self.ax = self.fig.add_subplot(121)

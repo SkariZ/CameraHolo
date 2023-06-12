@@ -413,7 +413,7 @@ class MainWindow(QMainWindow):
         self.c_p['SubtractionMode'] = not self.c_p['SubtractionMode']
 
     def get_fps(self):
-        self.frame_rate_label.setText("Frame rate: %d\n" % self.c_p['fps'])# str(main_window.c_p['fps']))
+        self.frame_rate_label.setText("Frame rate: %d\n" % self.c_p['fps'])
 
     def ToggleRecording(self):
         # Turns on/off recording
@@ -514,8 +514,6 @@ class MainWindow(QMainWindow):
             #Hide widgets if they exist
             try: widget.hide()
             except: pass
-            
-
         self.widgets = []
 
         #Garbage Collector
@@ -532,6 +530,9 @@ def create_camera_toolbar_external(main_window):
     # TODO do not have this as an external function, urk
     main_window.camera_toolbar = QToolBar("Camera tools")
     main_window.addToolBar(main_window.camera_toolbar)
+
+    main_window.camera_toolbar_sec = QToolBar("Secondary tools")
+    main_window.addToolBar(main_window.camera_toolbar_sec)
 
     # main_window.add_camera_actions(main_window.camera_toolbar)
     main_window.zoom_action = QAction("Zoom out", main_window)
@@ -555,12 +556,14 @@ def create_camera_toolbar_external(main_window):
     main_window.record_action.triggered.connect(main_window.ToggleRecording)
     main_window.record_action.setCheckable(True)
 
+    #Window for taking snapshot
     main_window.snapshot_action = QAction("Snapshot", main_window)
     main_window.snapshot_action.setToolTip("Take snapshot of camera view.")
     main_window.snapshot_action.setShortcut('Shift+S')
     main_window.snapshot_action.triggered.connect(main_window.snapshot)
     main_window.snapshot_action.setCheckable(False)
 
+    #Window for setting exposure time
     main_window.set_exp_tim = QAction("Set exposure time", main_window)
     main_window.set_exp_tim.setToolTip("Sets exposure time to the value in the textboox")
     main_window.set_exp_tim.triggered.connect(main_window.set_exposure_time)
@@ -570,14 +573,24 @@ def create_camera_toolbar_external(main_window):
     main_window.set_buffer_size.setToolTip("Sets buffer size to use when in subtraction mode")
     main_window.set_buffer_size.triggered.connect(main_window.set_buffer_size_text)
 
-    #Add actions to toolbar
+    main_window.get_frame_rate = QAction("FPS", main_window)
+    main_window.get_frame_rate.setToolTip("Update FPS.")
+    main_window.get_frame_rate.triggered.connect(main_window.get_fps)
+    main_window.get_frame_rate.setCheckable(False)
+
+    #Add actions to first toolbar
     main_window.camera_toolbar.addAction(main_window.zoom_action)
     main_window.camera_toolbar.addAction(main_window.record_action)
     main_window.camera_toolbar.addAction(main_window.snapshot_action)
     main_window.camera_toolbar.addAction(main_window.subtraction_action)
     main_window.camera_toolbar.addAction(main_window.flush_action)
 
+    #Add actions to second toolbar
+    main_window.camera_toolbar_sec.addAction(main_window.get_frame_rate)
+
     #Add textboxes to toolbar - These are not actions but settable.
+
+    #First toolbar
     main_window.exposure_time_LineEdit = QLineEdit()
     main_window.exposure_time_LineEdit.setText(str(main_window.c_p['exposure_time']))
     main_window.exposure_time_LineEdit.setValidator(QDoubleValidator(0.99,99.99, 2))
@@ -590,14 +603,11 @@ def create_camera_toolbar_external(main_window):
     main_window.camera_toolbar.addAction(main_window.set_buffer_size)
     main_window.camera_toolbar.addWidget(main_window.buffer_size_LineEdit)
 
+    #Secondary toolbar
+    main_window.frame_rate_label = QLabel()
+    main_window.frame_rate_label.setText("Frame rate: %d\n" % main_window.c_p['fps'])
+    main_window.camera_toolbar_sec.addWidget(main_window.frame_rate_label)
 
-    # TODO add offset and label to this        
-    #main_window.gain_LineEdit = QLineEdit()
-    #main_window.gain_LineEdit.setToolTip("Set software gain on displayed image.")
-    #main_window.gain_LineEdit.setValidator(QDoubleValidator(0.1,3,3))
-    #main_window.gain_LineEdit.setText(str(main_window.c_p['image_gain']))
-    #main_window.gain_LineEdit.textChanged.connect(main_window.set_gain)
-    #main_window.camera_toolbar.addWidget(main_window.gain_LineEdit)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
