@@ -2,10 +2,10 @@ import sys
 from PyQt6.QtWidgets import (
     QMainWindow, QCheckBox, QComboBox, QListWidget, QLineEdit,
     QLineEdit, QSpinBox, QDoubleSpinBox, QSlider, QToolBar,
-    QPushButton, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QInputDialog
+    QPushButton, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QInputDialog,
 )
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, Qt
 
 
 from pyqtgraph import PlotWidget, plot
@@ -16,12 +16,13 @@ import numpy as np
 from functools import partial
 
 from PyQt6.QtWidgets import (
- QCheckBox, QVBoxLayout, QWidget, QLabel, QTableWidget, QTableWidgetItem
+ QCheckBox, QVBoxLayout, QWidget, QLabel, QTableWidget, QTableWidgetItem,
 )
 
 # from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import Qt
 
 import matplotlib
 from matplotlib.figure import Figure
@@ -116,8 +117,6 @@ def imgtofield(img,
 class ReconstructField(QWidget):
     def __init__(self):
         super().__init__()
-        self.image = None
-        self.precalculated = False
         
         self.fig = Figure()
         self.canvas = FigureCanvas(self.fig)
@@ -131,85 +130,55 @@ class ReconstructField(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
         
-        self.precalculate()
-        self.update_image()
-        
-    def precalculate(self):
-
-        if self.image is not None and self.precalculated == False:
-            X, Y, X_c, Y_c, position_matrix, G, polynomial, KX, KY, KX2_add_KY2, kx_add_ky, dist_peak, masks, phase_background, rad  = P.pre_calculations(
-            self.image, 
-            filter_radius = [], 
-            cropping = 0, 
-            mask_radie = [], 
-            case = 'ellipse', 
-            first_phase_background = 0,
-            mask_out = True)
-
-            self.X = X
-            self.Y = Y
-            self.X_c = X_c
-            self.Y_c = Y_c
-            self.position_matrix = position_matrix
-            self.G = G
-            self.polynomial = polynomial
-            self.KX = KX
-            self.KY = KY
-            self.KX2_add_KY2 = KX2_add_KY2
-            self.kx_add_ky = kx_add_ky
-            self.dist_peak = dist_peak
-            self.masks = masks
-            #self.phase_background = phase_background
-            #self.rad = rad
-
-            #Set precalculated to true
-            self.precalculated = True
-
-    def update_data(self, new_data):
-        self.image = new_data
-        self.update_image()
-
-    def update_image(self):
+    def update_image(self, data, z, wavelength):
         self.ax.clear()
-        self.ax2.clear()
+        self.ax2.clear()    
 
-        #Pre-calculate the data if it is not done already
-        self.precalculate()
-
-        if self.image is not None:
-            
-            #Reconstruct the field
-            self.image, self.bg = imgtofield(
-                self.image, 
-                self.G, 
-                self.polynomial, 
-                self.kx_add_ky,
-                if_lowpass_b = False,
-                cropping = 0,  
-                mask_f = [],
-                z_prop = 0,
-                masks = self.masks,
-                add_phase_corrections= 0,
-                first_phase_background = []
-                )
+        if data is not None:
+            #Propagate the field
+            data = UZ.refocus_field_z(data, z, wavelength=wavelength, padding = 256)
             
             #-----#Phase#-----#
-            imt = self.ax.imshow(np.angle(self.image))
-            self.ax.set_xlabel('Phase')
+            imt = self.ax.imshow(data.real)
+            self.ax.set_xlabel(f'Real part ({z:.2f}) um')
             self.fig.colorbar(imt, cax=self.cax)
 
             #-----#Background#-----#
-            imt2 = self.ax2.imshow(self.bg)
-            self.ax2.set_xlabel('Background')
+            imt2 = self.ax2.imshow(data.imag)
+            self.ax2.set_xlabel(f'Imag part ({z:.2f}) um')
             self.fig.colorbar(imt2, cax=self.cax2)
 
             #-----#Update the canvas#-----#
             self.fig.tight_layout()
             self.canvas.draw()
 
+def get_field(image):
+        _, _, _, _, _, G, polynomial, _, _, __, kx_add_ky, _, masks, _, _  = P.pre_calculations(
+        image, 
+        filter_radius = [], 
+        cropping = 0, 
+        mask_radie = [], 
+        case = 'ellipse', 
+        first_phase_background = 0,
+        mask_out = True)
 
+        #Get the field
+        E_field, _ = imgtofield(
+                image, 
+                G, 
+                polynomial, 
+                kx_add_ky,
+                if_lowpass_b = False,
+                cropping = 0,  
+                mask_f = [],
+                z_prop = 0,
+                masks = masks,
+                add_phase_corrections= 0,
+                first_phase_background = []
+                )
+        return E_field
 
-class FieldAnalytics(QMainWindow):
+class FieldAnalyticsZ(QMainWindow):
     def __init__(self, c_p):
         super().__init__()
         self.setWindowTitle("Field Analytics")
@@ -217,6 +186,15 @@ class FieldAnalytics(QMainWindow):
 
         self.Recon_Widget = ReconstructField()
         
+        print('Calculating field...')
+        self.field = get_field(c_p['image'])
+        print('Field calculated')
+
+        #TODO - maybe better to compute all propagations at once and then just scroll through them.
+
+        self.z = 0
+        self.wavelength = 0.532
+
         #Define Side-by-side layout
         layout = QHBoxLayout()
         layout.addWidget(self.Recon_Widget)
@@ -226,51 +204,61 @@ class FieldAnalytics(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
-        #Update the data every second
-        self.timer = QTimer()
-        self.timer.timeout.connect(lambda: self.update_data(c_p['image']))
-        self.timer.start(1000)
-
         #Add a toolbar
         self.toolbar = QToolBar("Options")
         self.addToolBar(self.toolbar)
         
-        #Add a button to toggle the image FFT
+        #Add toolbar for z, place below toolbar
+        self.toolbar_z = QToolBar("Z options")
+        self.addToolBar(self.toolbar_z)
+
+        #Add a scroll bar for z
+        self.z_slider = QSlider(Qt.Orientation.Horizontal)
+        self.z_slider.setMinimum(-100.0)
+        self.z_slider.setMaximum(100.0)
+        self.z_slider.setValue(0.0)
+        self.z_slider.setTickInterval(10)
+        self.z_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+
+        self.z_slider.valueChanged.connect(self.set_z)
+        self.toolbar_z.addWidget(self.z_slider)
+
+        #Add a button for setting the wavelength
+        self.set_wavelength_action = QAction("Set wavelength", self)
+        self.set_wavelength_action.triggered.connect(self.set_wavelength)
+        self.toolbar.addAction(self.set_wavelength_action)
+
+        #Add a button for updating the field
+        self.update_field_action = QAction("Update field", self)
+        self.update_field_action.triggered.connect(self.update_field)
+        self.toolbar.addAction(self.update_field_action)
+
+        #Add a button to toggle the image
         self.toggle_image_action = QAction("Toggle Image", self)
         self.toggle_image_action.setCheckable(True)
         self.toggle_image_action.setChecked(True)
-        self.toggle_image_action.triggered.connect(self.toggle_image_fft)
+        self.toggle_image_action.triggered.connect(self.toggle_image)
         self.toolbar.addAction(self.toggle_image_action)
 
-        #Add a button for closing the window
-        self.close_action = QAction("Close window", self)
-        self.close_action.triggered.connect(self.close)
-        self.toolbar.addAction(self.close_action)
+    def update_field(self):
+        self.Recon_Widget.update_image(self.field, self.z, self.wavelength)
 
-        #Add a button for setting z value
-        #self.set_z_action = QAction("Set z value", self)
-        #self.set_z_action.triggered.connect(self.set_z)
-        #self.toolbar.addAction(self.set_z_action)
-
-    def toggle_image_fft(self):
+    def toggle_image(self):
         if self.toggle_image_action.isChecked():
             self.Recon_Widget.show()
         else:
             self.Recon_Widget.hide()
 
-    def close(self):
-        self.timer.stop()
-        self.hide()
+    def set_z(self):
+        self.z = self.z_slider.value()/10
+        self.update_field()
 
-    def update_data(self, new_data):
-        self.Recon_Widget.update_data(new_data)
+    def set_wavelength(self):
+        wavelength, ok = QInputDialog.getDouble(self, 'Set wavelength', 'Enter wavelength um:', decimals = 3)
 
-
-    #def set_z(self):
-    #    z, okPressed = QInputDialog.getDouble(self, "Set z value","z value:", 0, -1000, 1000, 3)
-    #    if okPressed:
-    #        self.z_prop = z
-        #TODO update the image with the new z value   
+        if ok:
+            self.wavelength = wavelength        
+    
             
 
 

@@ -37,6 +37,7 @@ from ControlParameters import default_c_p, get_data_dicitonary_new
 from SaveDataWidget import SaveDataWindow
 from DataAnalytics import DataAnalytics
 from FieldRecon import FieldAnalytics
+from FieldRecon_Z import FieldAnalyticsZ
 #from PIStage import PIStageThread
 #from PIStageWidget import PIStageWidget
 #import MotorControlWidget
@@ -378,6 +379,11 @@ class MainWindow(QMainWindow):
         self.open_field_recon_window.setCheckable(False)
         window_menu.addAction(self.open_field_recon_window)
 
+        self.open_field_recon_window_z = QAction("Field propagation", self)
+        self.open_field_recon_window_z.setToolTip("Open window for propagating field")
+        self.open_field_recon_window_z.triggered.connect(self.show_field_analytics_window_z)
+        self.open_field_recon_window_z.setCheckable(False)
+        window_menu.addAction(self.open_field_recon_window_z)
 
     def set_video_format(self, video_format):
         self.c_p['video_format'] = video_format
@@ -485,6 +491,11 @@ class MainWindow(QMainWindow):
         self.field_analytics_window = FieldAnalytics(self.c_p)
         self.field_analytics_window.show()
         self.widgets.append(self.field_analytics_window)
+
+    def show_field_analytics_window_z(self, checked):
+        self.field_analytics_window_z = FieldAnalyticsZ(self.c_p)
+        self.field_analytics_window_z.show()
+        self.widgets.append(self.field_analytics_window_z)
 
     def DataWindow(self):
         self.data_window= SaveDataWindow(self.c_p, self.data_channels)

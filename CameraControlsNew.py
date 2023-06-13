@@ -177,7 +177,7 @@ class CameraThread(Thread):
             #img = img[:self.c_p['camera_width'], :self.c_p['camera_height']]
 
 
-            if len(self.buffer)<self.c_p['SubtractionBuffer']:
+            if len(self.buffer)<self.c_p['buffer_size']:
                 self.buffer.append(img)
             else:
                 self.buffer.pop(0)
