@@ -241,16 +241,11 @@ class FieldAnalytics(QMainWindow):
         self.toggle_image_action.setChecked(True)
         self.toggle_image_action.triggered.connect(self.toggle_image_fft)
         self.toolbar.addAction(self.toggle_image_action)
-
+        
         #Add a button for closing the window
         self.close_action = QAction("Close window", self)
         self.close_action.triggered.connect(self.close)
         self.toolbar.addAction(self.close_action)
-
-        #Add a button for setting z value
-        #self.set_z_action = QAction("Set z value", self)
-        #self.set_z_action.triggered.connect(self.set_z)
-        #self.toolbar.addAction(self.set_z_action)
 
     def toggle_image_fft(self):
         if self.toggle_image_action.isChecked():
@@ -264,15 +259,6 @@ class FieldAnalytics(QMainWindow):
 
     def update_data(self, new_data):
         self.Recon_Widget.update_data(new_data)
-
-
-    #def set_z(self):
-    #    z, okPressed = QInputDialog.getDouble(self, "Set z value","z value:", 0, -1000, 1000, 3)
-    #    if okPressed:
-    #        self.z_prop = z
-        #TODO update the image with the new z value   
-            
-
 
     
 
