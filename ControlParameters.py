@@ -47,49 +47,10 @@ def default_c_p():
            'frame_queue': Queue(maxsize=2_000_000),  # Frame buffer essentially
            'image_scale': 1,
            'microns_per_pix': 30/5000 * 1e-3, # 5000 pixels per 30 micron roughly, changed to have more movements
-
-           # Temperature c_p
-           'temperature_output_on':False,
            
-           # Piezo c_p (xyz separete stage)
-           'piezo_targets': [10,10,10],
-           'piezo_pos': [10,10,10],
-           
-           # PIC reader c_p
-           # TODO add all the necessary channels here. PSDs and motors.
-           'pic_channels':[
-                            'PSD_A_P_X', 'PSD_A_P_Y', 'PSD_A_P_sum',
-                            'PSD_A_F_X', 'PSD_A_F_Y', 'PSD_A_F_sum',
-                            'PSD_B_P_X', 'PSD_B_P_Y', 'PSD_B_P_sum',
-                            'PSD_B_F_X', 'PSD_B_F_Y', 'PSD_B_F_sum',
-                            'Photodiode_A','Photodiode_B',
-                            'Motor_x_pos', 'Motor_y_pos', 'Motor_z_pos', 
-                            #'Motor_x_speed', 'Motor_y_speed', 'Motor_z_speed',
-                            'T_time','Time_micros_high','Time_micros_low',
-                           ],
-
-             #Settings for subtraction mode              
+            #Settings for subtraction mode              
             'SubtractionMode':False,
             'buffer_size': 8,
-
-           # Temporary solution to use both PIC and Portenta
-           'old_pic_channels':[
-                            'PSD_A_P_X', 'PSD_A_P_Y', 'PSD_A_P_sum',
-                            'PSD_A_F_X', 'PSD_A_F_Y', 'PSD_A_F_sum',
-                            'PSD_B_P_X', 'PSD_B_P_Y', 'PSD_B_P_sum',
-                            'PSD_B_F_X', 'PSD_B_F_Y', 'PSD_B_F_sum',
-                            'T_time',
-                            'Motor_x_pos', 'Motor_y_pos', 'Motor_z_pos', 
-                            'Motor_x_speed', 'Motor_y_speed', 'Motor_z_speed',
-                           ],
-            
-            'used_pic_channels':[
-                            'PSD_A_P_X', 'PSD_A_P_Y', 'PSD_A_P_sum',
-                            'PSD_B_P_X', 'PSD_B_P_Y', 'PSD_B_P_sum',],
-                            
-           # Piezo outputs
-           'piezo_A': np.uint16([20_000, 20_000]),
-           'piezo_B': np.uint16([20_000, 20_000]),
 
            # Deep learning tracking
            'network': None,
@@ -110,19 +71,6 @@ def default_c_p():
             'trap_particle': False,
             'search_and_trap': False,
             'laser_position': [1520,1830], # Default 
-
-            # Minitweezers controller parameters
-            'COM_port': 'COM9',
-            'minitweezers_connected': False,
-
-           # Minitweezers motors
-           'motor_x_target_speed': 0,
-           'motor_y_target_speed': 0,
-           'motor_z_target_speed': 0,
-           'minitweezers_target_pos': [32678,32678,32678],
-           'minitweezers_target_speed': [0,0,0],
-           'motor_travel_speed': 5_000,
-           'move_to_location': False, # Should the motors move to a location rather than listen to the speed?
 
            # Thorlabs motors
            'disconnect_motor':[False,False,False],

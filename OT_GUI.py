@@ -111,7 +111,6 @@ class Worker(QThread):
         for pos in centers:
             x = int(pos[0]/ self.c_p['image_scale']) # Which is which?
             y = int(pos[1]/ self.c_p['image_scale'])
-
             self.qp.drawEllipse(x-int(rx/2)-1, y-int(ry/2)-1, rx, ry)
     
     def preprocess_image(self):
@@ -123,6 +122,7 @@ class Worker(QThread):
             # TODO unacceptably slow
             self.image = (self.image*self.c_p['image_gain'])
 
+        #Ensure that the image is uint8
         self.image = np.uint8(self.image)
 
     def draw_central_circle(self):
@@ -172,15 +172,18 @@ class Worker(QThread):
                 W,H,
                 Qt.AspectRatioMode.KeepAspectRatio,
             )
+
             # Give other things time to work, roughly 40-50 fps default.
-            sleep(0.04) # Sets the FPS
+            sleep(0.01) # Sets the FPS
             
             # Paint extra items on the screen
             self.qp = QPainter(picture)
+
             # Draw zoom in rectangle
             self.c_p['click_tools'][self.c_p['mouse_params'][5]].draw(self.qp)
             self.qp.setPen(self.blue_pen)
 
+            # Draw central circle
             if self.c_p['tracking_on']:
                 self.draw_particle_positions(self.c_p['predicted_particle_positions'])
 
@@ -200,6 +203,7 @@ class MainWindow(QMainWindow):
         self.c_p = default_c_p()
         self.data_channels = get_data_dicitonary_new()
         self.video_idx = 0
+
         # Start camera threads
         self.CameraThread = None
         try:
@@ -208,12 +212,10 @@ class MainWindow(QMainWindow):
             
             if camera is not None:
                 self.CameraThread = CameraThread(self.c_p, camera)
-
                 self.CameraThread.start()
 
         except Exception as E:
             print(f"Camera error!\n{E}")
-        #self.TemperatureThread = None
        
         self.VideoWriterThread = VideoWriterThread(2, 'video thread', self.c_p)
         self.VideoWriterThread.start()
@@ -365,20 +367,21 @@ class MainWindow(QMainWindow):
         window_menu = self.menu.addMenu("Windows")
         window_menu.addSeparator()
 
-        # Add command to open another window...
+        # Data analytics window
         self.open_data_window = QAction("Data analytics", self)
         self.open_data_window.setToolTip("Open window for data analytics.")
         self.open_data_window.triggered.connect(self.show_data_analytics_window)
         self.open_data_window.setCheckable(False)
         window_menu.addAction(self.open_data_window)
 
-        # Add command to open another window... 
+        #Field reconstruction window 
         self.open_field_recon_window = QAction("Field reconstruction", self)
         self.open_field_recon_window.setToolTip("Open window for field reconstruction.")
         self.open_field_recon_window.triggered.connect(self.show_field_analytics_window)
         self.open_field_recon_window.setCheckable(False)
         window_menu.addAction(self.open_field_recon_window)
 
+        #Z propagation window
         self.open_field_recon_window_z = QAction("Field propagation", self)
         self.open_field_recon_window_z.setToolTip("Open window for propagating field")
         self.open_field_recon_window_z.triggered.connect(self.show_field_analytics_window_z)
@@ -435,8 +438,7 @@ class MainWindow(QMainWindow):
     def snapshot(self):
         # Captures a snapshot of what the camera is viewing and saves that
         idx = str(self.c_p['image_idx'])
-        filename = self.c_p['recording_path'] + '/'+self.c_p['filename']+'image_' + idx +'.'+\
-            self.c_p['image_format']
+        filename = self.c_p['recording_path'] + '/'+self.c_p['filename']+'image_' + idx +'.'+ self.c_p['image_format']
         if self.c_p['image_format'] == 'npy':
             np.save(filename[:-4], self.c_p['image'])
         else:
@@ -455,7 +457,6 @@ class MainWindow(QMainWindow):
         self.c_p['mouse_params'][4] = e.pos().y()-self.label.pos().y()
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseMove()
 
-
     def mousePressEvent(self, e):
         self.c_p['mouse_params'][1] = e.pos().x()-self.label.pos().x()
         self.c_p['mouse_params'][2] = e.pos().y()-self.label.pos().y()
@@ -473,7 +474,6 @@ class MainWindow(QMainWindow):
         self.c_p['mouse_params'][4] = e.pos().y()-self.label.pos().y()
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseRelease()
         self.c_p['mouse_params'][0] = 0
-
 
     def mouseDoubleClickEvent(self, e):
         # Double click to move center?
@@ -525,6 +525,7 @@ class MainWindow(QMainWindow):
             #Hide widgets if they exist
             try: widget.hide()
             except: pass
+
         self.widgets = []
 
         #Garbage Collector
