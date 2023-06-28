@@ -103,15 +103,15 @@ class Worker(QThread):
             self.data_channels['Z-position'].put_data(np.random.rand() * 2 - 1)
             self.data_channels['Motor_position'].put_data((self.data_channels['Time'].get_data(1) / 10) + np.random.rand())
 
-    def draw_particle_positions(self, centers):
-        # TODO add function also for crosshair to help with alignment.
-        rx = int(250/self.c_p['image_scale'])
-        ry = rx
-        self.qp.setPen(self.red_pen)
-        for pos in centers:
-            x = int(pos[0]/ self.c_p['image_scale']) # Which is which?
-            y = int(pos[1]/ self.c_p['image_scale'])
-            self.qp.drawEllipse(x-int(rx/2)-1, y-int(ry/2)-1, rx, ry)
+    #def draw_particle_positions(self, centers):
+    #    # TODO add function also for crosshair to help with alignment.
+    #    rx = int(250/self.c_p['image_scale'])
+    #    ry = rx
+    #    self.qp.setPen(self.red_pen)
+    #    for pos in centers:
+    #        x = int(pos[0]/ self.c_p['image_scale']) # Which is which?
+    #        y = int(pos[1]/ self.c_p['image_scale'])
+    #        self.qp.drawEllipse(x-int(rx/2)-1, y-int(ry/2)-1, rx, ry)
     
     def preprocess_image(self):
         # Check if offset and gain should be applied.
@@ -125,13 +125,13 @@ class Worker(QThread):
         #Ensure that the image is uint8
         self.image = np.uint8(self.image)
 
-    def draw_central_circle(self):
-        self.blue_pen.setColor(QColor('blue'))
-        cx = int((self.c_p['camera_width']/2 - self.c_p['AOI'][0])/self.c_p['image_scale'])
-        cy = int((self.c_p['camera_height']/2 - self.c_p['AOI'][2])/self.c_p['image_scale'])
-        rx=50
-        ry=50
-        self.qp.drawEllipse(cx-int(rx/2)-1, cy-int(ry/2)-1, rx, ry)
+    #def draw_central_circle(self):
+    #    self.blue_pen.setColor(QColor('blue'))
+    #    cx = int((self.c_p['camera_width']/2 - self.c_p['AOI'][0])/self.c_p['image_scale'])
+    #    cy = int((self.c_p['camera_height']/2 - self.c_p['AOI'][2])/self.c_p['image_scale'])
+    #    rx=50
+    #    ry=50
+    #    self.qp.drawEllipse(cx-int(rx/2)-1, cy-int(ry/2)-1, rx, ry)
 
     def run(self):
         # Initialize pens to draw on the images
@@ -174,7 +174,7 @@ class Worker(QThread):
             )
 
             # Give other things time to work, roughly 40-50 fps default.
-            sleep(0.01) # Sets the FPS
+            #sleep(0.01) # Sets the FPS
             
             # Paint extra items on the screen
             self.qp = QPainter(picture)
@@ -184,8 +184,8 @@ class Worker(QThread):
             self.qp.setPen(self.blue_pen)
 
             # Draw central circle
-            if self.c_p['tracking_on']:
-                self.draw_particle_positions(self.c_p['predicted_particle_positions'])
+            #if self.c_p['tracking_on']:
+            #    self.draw_particle_positions(self.c_p['predicted_particle_positions'])
 
             self.qp.end()
             self.changePixmap.emit(picture)
