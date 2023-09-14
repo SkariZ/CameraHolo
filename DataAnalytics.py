@@ -28,6 +28,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 class HistogramWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -50,12 +51,12 @@ class HistogramWidget(QWidget):
     def update_histogram(self):
         self.ax.clear()
         if self.data is not None:
-            histdata = self.data.flatten()#np.random.choice(self.data.flatten(), 50000) # For faster plotting
+            histdata = np.random.choice(self.data.flatten(), 100000) if len(self.data.flatten()) < 100000 else self.data.flatten()
             #Check if histdata is uint8
             if histdata[0].dtype == np.uint8:
-                self.ax.hist(histdata, bins=np.arange(0, 255), color='darkblue', alpha=0.7)
+                self.ax.hist(histdata, bins=np.arange(0, 255), color='goldenrod', alpha=0.7)
             else:
-                self.ax.hist(histdata, bins=100, color='darkblue', alpha=0.7)
+                self.ax.hist(histdata, bins=100, color='goldenrod', alpha=0.7)
 
         self.ax.set_xlabel('Value')
         self.ax.set_ylabel('Frequency')
@@ -86,7 +87,7 @@ class ImageWidgetFFT(QWidget):
         self.ax.clear()
         if self.image is not None:
             fft_img = np.abs(np.fft.fftshift(np.fft.fft2(self.image)))
-            imt = self.ax.imshow(np.log10(fft_img, out=np.zeros_like(fft_img), where=(fft_img!=0)), cmap='gray')
+            imt = self.ax.imshow(np.log10(fft_img, out=np.zeros_like(fft_img), where=(fft_img!=0)), cmap='magma')
 
             #Add colorbar
             self.fig.colorbar(imt, cax=self.cax)

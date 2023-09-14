@@ -8,7 +8,6 @@ import numpy as np
 from CameraControlsNew import CameraInterface
 from pypylon import pylon  # For basler camera, maybe move that out of here
 from time import sleep
-import os
 
 class TimeoutException(Exception):
     print("Timeout of camera!")
@@ -18,8 +17,10 @@ class BaslerCamera(CameraInterface):
     def __init__(self):
         self.capturing = False
         self.img = pylon.PylonImage()
-        self.is_grabbing = False
+        self.img2 = pylon.PylonImage()
 
+        self.is_grabbing = False
+    '''
     def capture_image(self):
         
         if not self.is_grabbing:
@@ -39,36 +40,78 @@ class BaslerCamera(CameraInterface):
                     return image
         except TimeoutException as TE:
             print(f"Warning, camera timed out {TE}")
+    '''
+    def capture_image(self):
+        
+        if not self.is_grabbing:
+            self.cam.StartGrabbing(pylon.GrabStrategy_OneByOne)
+            self.cam2.StartGrabbing(pylon.GrabStrategy_OneByOne) #basler2
+            self.is_grabbing = True
+        try:
+            self.cam.ExecuteSoftwareTrigger()
+            self.cam2.ExecuteSoftwareTrigger() #basler2
+            
+            result = self.cam.RetrieveResult(3000)
+            result2 = self.cam2.RetrieveResult(3000) #basler2
+
+            self.img.AttachGrabResultBuffer(result)
+            self.img2.AttachGrabResultBuffer(result2) #basler2
+            
+            if result.GrabSucceeded():# and result2.GrabSucceeded():
+                # Consider if we need to put directly in c_p?
+                image = np.uint8(self.img.GetArray())
+                image2 = np.uint8(self.img2.GetArray()) #basler2
+                tmp = np.zeros(np.shape(image)) #basler2?
+                tmp[0:np.shape(image2)[0],0:np.shape(image2)[1]] = image2 #basler2
+                org_img = np.concatenate((image, tmp), 0) #basler
+                image = np.fliplr(org_img)
+                return image
+             
+        except TimeoutException as TE:
+            print(f"Warning, camera timed out {TE}")
+
 
     def connect_camera(self):
         try:
             
             #os.environ["PYLON_CAMEMU"] = "1"
 
-            tlf = pylon.TlFactory.GetInstance()
-            self.cam = pylon.InstantCamera(tlf.CreateFirstDevice())
-            self.cam.Open()
+            #tlf = pylon.TlFactory.GetInstance() #basler2?
+            #self.cam = pylon.InstantCamera(tlf.CreateFirstDevice()) #basler2?
+            #self.cam.Open() #basler2?
             
             #self.cam.ImageFileMode = "On"
             #self.cam.TestImageSelector = "Off"
             #self.cam.ImageFilename = r"D:\SiO2_776nmEvery1_3\videos\figs"
             #self.cam.PixelFormat = "Mono8"
-            
+
+            tlf = pylon.TlFactory.GetInstance()
+            devices = tlf.EnumerateDevices()
+            self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[0]))
+            self.cam.Open()
+
+            # Adding second camera
+            self.cam2 = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[1]))
+            self.cam2.Open()
+            print("Camera 2 is now open")
             sleep(0.2)
+            
             return True
+        
         except Exception as ex:
             self.cam = None
             print(ex)
-            
             return False
         
     def disconnect_camera(self):
         self.stop_grabbing()
         self.cam.Close()
         self.cam = None
+
     def stop_grabbing(self):
         try:
             self.cam.StopGrabbing()
+            self.cam2.StopGrabbing()
         except:
             pass
         self.is_grabbing = False

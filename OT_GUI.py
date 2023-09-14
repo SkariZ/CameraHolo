@@ -48,7 +48,6 @@ from FieldRecon_Z import FieldAnalyticsZ
 #from ReadArduinoPortenta import PortentaComms
 #import AutoController
 
-
 class Worker(QThread):
     '''
     Worker thread
@@ -73,6 +72,7 @@ class Worker(QThread):
         self.args = args
         self.kwargs = kwargs
         self.test_mode = test_mode
+        self.buffer = []
         # self.signals = WorkerSignals()
 
     def testDataUpdate(self, max_length=10_000):
@@ -103,16 +103,6 @@ class Worker(QThread):
             self.data_channels['Z-position'].put_data(np.random.rand() * 2 - 1)
             self.data_channels['Motor_position'].put_data((self.data_channels['Time'].get_data(1) / 10) + np.random.rand())
 
-    #def draw_particle_positions(self, centers):
-    #    # TODO add function also for crosshair to help with alignment.
-    #    rx = int(250/self.c_p['image_scale'])
-    #    ry = rx
-    #    self.qp.setPen(self.red_pen)
-    #    for pos in centers:
-    #        x = int(pos[0]/ self.c_p['image_scale']) # Which is which?
-    #        y = int(pos[1]/ self.c_p['image_scale'])
-    #        self.qp.drawEllipse(x-int(rx/2)-1, y-int(ry/2)-1, rx, ry)
-    
     def preprocess_image(self):
         # Check if offset and gain should be applied.
         if self.c_p['image_offset'] != 0:
@@ -125,13 +115,30 @@ class Worker(QThread):
         #Ensure that the image is uint8
         self.image = np.uint8(self.image)
 
-    #def draw_central_circle(self):
-    #    self.blue_pen.setColor(QColor('blue'))
-    #    cx = int((self.c_p['camera_width']/2 - self.c_p['AOI'][0])/self.c_p['image_scale'])
-    #    cy = int((self.c_p['camera_height']/2 - self.c_p['AOI'][2])/self.c_p['image_scale'])
-    #    rx=50
-    #    ry=50
-    #    self.qp.drawEllipse(cx-int(rx/2)-1, cy-int(ry/2)-1, rx, ry)
+    def subtraction_mode_image(self):
+        
+        if len(self.buffer) < self.c_p['buffer_size'] and self.c_p['SubtractionMode']:
+            self.buffer.append(self.image)
+        else:
+            #pop n elements from the buffer depending on the buffer size
+            while len(self.buffer) >= self.c_p['buffer_size']:
+                self.buffer.pop(0)
+            self.buffer.append(self.image)
+            
+        if self.c_p['SubtractionMode']:
+            try:
+                self.image = self.buffer[-1].astype(np.float32) - np.mean(np.array(self.buffer).astype(np.float32)[:-1], axis=0)
+            except:
+                self.image = self.buffer[-1]
+        else:
+            self.image = self.buffer[-1]
+
+    def high_speed_mode_image(self):
+
+        if self.c_p['HighSpeedMode_method']=='bin':
+            self.image = self.image[::int(self.c_p['HighSpeedMode_ds']), ::int(self.c_p['HighSpeedMode_ds'])].astype(np.float32)
+        else:
+            self.image = cv2.resize(self.image, (0,0), fx=int(self.c_p['HighSpeedMode_ds']), fy=int(self.c_p['HighSpeedMode_ds']), interpolation=cv2.INTER_NEAREST).astype(np.float32)
 
     def run(self):
         # Initialize pens to draw on the images
@@ -149,15 +156,23 @@ class Worker(QThread):
             if self.c_p['image'] is not None:
                 self.image = np.array(self.c_p['image'])
             else:
-                print("Frame missed!")
+                print("Frame does not exist, missing!")
     
             W, H = self.c_p['frame_size']
-            
             self.c_p['image_scale'] = max(self.image.shape[1]/W, self.image.shape[0]/H)
 
+            #Sanity check
             self.preprocess_image()
             
-            # It is quite sensitive to the format here, won't accept any missmatch
+            #High speed mode
+            if self.c_p['HighSpeedMode']:
+                self.high_speed_mode_image()
+
+            #Subtraction mode
+            if self.c_p['SubtractionMode']:
+                self.subtraction_mode_image()
+
+            # It is quite sensitive to the format here, won't accept any mismatch
             if len(np.shape(self.image)) < 3:
                 QT_Image = QImage(self.image, self.image.shape[1],
                                        self.image.shape[0],
@@ -167,25 +182,21 @@ class Worker(QThread):
                 QT_Image = QImage(self.image, self.image.shape[1],
                                        self.image.shape[0],
                                        QImage.Format.Format_RGB888)
-                
+            print('ok2')    
             picture = QT_Image.scaled(
-                W,H,
+                W, H,
                 Qt.AspectRatioMode.KeepAspectRatio,
             )
 
             # Give other things time to work, roughly 40-50 fps default.
-            #sleep(0.01) # Sets the FPS
-            
+            sleep(0.1)
+
             # Paint extra items on the screen
             self.qp = QPainter(picture)
 
             # Draw zoom in rectangle
             self.c_p['click_tools'][self.c_p['mouse_params'][5]].draw(self.qp)
             self.qp.setPen(self.blue_pen)
-
-            # Draw central circle
-            #if self.c_p['tracking_on']:
-            #    self.draw_particle_positions(self.c_p['predicted_particle_positions'])
 
             self.qp.end()
             self.changePixmap.emit(picture)
@@ -221,11 +232,11 @@ class MainWindow(QMainWindow):
         self.VideoWriterThread.start()
         self.widgets = []
 
-        # Set up camera window
+        # Set up camera window. This is just how it looks once starting.
         H=int(1024/4)
-        W=int(1024/4)
-
+        W=int(1024)
         sleep(0.5)
+
         self.c_p['frame_size'] = int(self.c_p['camera_width']/2), int(self.c_p['camera_height']/2)
         self.label = QLabel("Hello")
         self.label.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -239,7 +250,6 @@ class MainWindow(QMainWindow):
         th.start()
 
         # Create toolbar
-        #self.create_camera_toolbar()
         create_camera_toolbar_external(self)
         self.addToolBarBreak() 
         self.create_mouse_toolbar()
@@ -303,7 +313,6 @@ class MainWindow(QMainWindow):
         video_formats = ['avi','mp4','npy']
 
         for f in video_formats :
-
             format_command= partial(self.set_video_format, f)
             format_action = QAction(f, self)
             format_action.setStatusTip(f"Set recording format to {f}")
@@ -421,6 +430,9 @@ class MainWindow(QMainWindow):
     def SubtractionMode(self):
         self.c_p['SubtractionMode'] = not self.c_p['SubtractionMode']
 
+    def HighSpeedMode(self):
+        self.c_p['HighSpeedMode'] = not self.c_p['HighSpeedMode']
+
     def get_fps(self):
         self.frame_rate_label.setText("Frame rate: %d\n" % self.c_p['fps'])
 
@@ -513,6 +525,7 @@ class MainWindow(QMainWindow):
         self.widgets = []
 
     def flush_memory(self):
+        "Flushes the memory(closes open widgets and clears data)."
 
         #Close all widgets
         for widget in self.widgets:
@@ -557,6 +570,11 @@ def create_camera_toolbar_external(main_window):
     main_window.subtraction_action.triggered.connect(main_window.SubtractionMode)
     main_window.subtraction_action.setCheckable(True)
 
+    main_window.highspeed_action = QAction("HighSpeed mode", main_window)
+    main_window.highspeed_action.setToolTip("Switches to high speed mode.")
+    main_window.highspeed_action.triggered.connect(main_window.HighSpeedMode)
+    main_window.highspeed_action.setCheckable(True)
+
     main_window.flush_action = QAction("Flush memory", main_window)
     main_window.flush_action.setToolTip("Flushes the memory(closes open widgets and clears data).")
     main_window.flush_action.triggered.connect(main_window.flush_memory)
@@ -595,6 +613,7 @@ def create_camera_toolbar_external(main_window):
     main_window.camera_toolbar.addAction(main_window.record_action)
     main_window.camera_toolbar.addAction(main_window.snapshot_action)
     main_window.camera_toolbar.addAction(main_window.subtraction_action)
+    main_window.camera_toolbar.addAction(main_window.highspeed_action)
     main_window.camera_toolbar.addAction(main_window.flush_action)
 
     #Add actions to second toolbar

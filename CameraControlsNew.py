@@ -165,7 +165,7 @@ class CameraThread(Thread):
     def run(self):
         self.c_p['exposure_time'] = self.camera.get_exposure_time()
         count = 0
-        self.buffer=[]
+        
         while self.c_p['program_running']:
             if self.c_p['new_settings_camera'][0]:
                 self.update_camera_settings()
@@ -174,32 +174,18 @@ class CameraThread(Thread):
                 p_t = perf_counter()
 
             img=self.camera.capture_image()
-            #img = img[:self.c_p['camera_width'], :self.c_p['camera_height']]
-
-
-            if len(self.buffer)<self.c_p['buffer_size']:
-                self.buffer.append(img)
-            else:
-                self.buffer.pop(0)
-                self.buffer.append(img)
-                
-            if self.c_p['SubtractionMode']:
-                try:
-                    self.c_p['image']= self.buffer[-1].astype(np.float32)-np.mean(np.array(self.buffer).astype(np.float32)[:-1], axis=0)
-                except:
-                    self.c_p['image']= self.buffer[-1]
-            else:
-                self.c_p['image'] = self.buffer[-1]
+            self.c_p['image'] = img
 
             if self.c_p['image'] is None:
                 print("None image error!!?!?")
+
             if self.c_p['recording']:
                 img = copy(self.c_p['image'])
                 name = copy(self.c_p['video_name'])
                 self.c_p['frame_queue'].put([img, name,
                                              self.c_p['video_format']])
             if count % 20 == 15:
-                self.c_p['fps'] = 10 / (perf_counter()-p_t)
+                self.c_p['fps'] = 11 / (perf_counter()-p_t)
                 
 
 

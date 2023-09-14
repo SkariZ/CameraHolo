@@ -240,6 +240,8 @@ class FieldAnalyticsZ(QMainWindow):
         self.toggle_image_action.triggered.connect(self.toggle_image)
         self.toolbar.addAction(self.toggle_image_action)
 
+    #TODO - precalculate Tz matrix and then just multiply with field.
+
     def update_field(self):
         self.Recon_Widget.update_image(self.field, self.z, self.wavelength)
 

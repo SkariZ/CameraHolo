@@ -52,6 +52,11 @@ def default_c_p():
             'SubtractionMode':False,
             'buffer_size': 8,
 
+            #Settings for HighSpeedMode
+            'HighSpeedMode':False,
+            'HighSpeedMode_ds': 2, #Downsampling factor
+            'HighSpeedMode_method':'bin', #'bin' is faster, 'avg' is more accurate
+
            # Deep learning tracking
            'network': None,
            'tracking_on': False,
@@ -70,7 +75,7 @@ def default_c_p():
             'centering_on': False,
             'trap_particle': False,
             'search_and_trap': False,
-            'laser_position': [1520,1830], # Default 
+            'laser_position': [1520, 1830], # Default 
 
            # Thorlabs motors
            'disconnect_motor':[False,False,False],
