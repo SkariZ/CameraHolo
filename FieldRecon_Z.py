@@ -130,7 +130,7 @@ class ReconstructField(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
         
-    def update_image(self, data, z, tz, padding = 256):
+    def update_image(self, data, z, tz, padding = 128):
         self.ax.clear()
         self.ax2.clear()    
 
@@ -193,8 +193,6 @@ class FieldAnalyticsZ(QMainWindow):
         self.field = np.fft.fft2(get_field(c_p['image']))
         print('Field calculated')
 
-        #TODO - maybe better to compute all propagations at once and then just scroll through them.
-
         self.z = 0
         self.wavelength = 0.532
         self.min_z = -10
@@ -204,11 +202,10 @@ class FieldAnalyticsZ(QMainWindow):
         self.TZ = None
         self.padding = 128
 
-        if self.TZ is None:
-            self.TZ = UZ.get_Tz(self.wavelength, self.zvals, np.shape(self.field), self.padding)
-
-        if self.padding > 0:    
+        if self.padding > 0 and self.TZ is None:    
             self.field = np.pad(self.field, ((self.padding, self.padding), (self.padding, self.padding)), mode = 'reflect')
+        if self.TZ is None:
+            self.TZ = UZ.get_Tz(self.wavelength, self.zvals, np.shape(self.field), padding = 0)
 
         #Define Side-by-side layout
         layout = QHBoxLayout()

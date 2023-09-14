@@ -16,10 +16,11 @@ class BaslerCamera(CameraInterface):
 
     def __init__(self):
         self.capturing = False
+        self.is_grabbing = False
         self.img = pylon.PylonImage()
         self.img2 = pylon.PylonImage()
-
-        self.is_grabbing = False
+        self.cam = None
+        self.cam2 = None
     '''
     def capture_image(self):
         
@@ -43,59 +44,81 @@ class BaslerCamera(CameraInterface):
     '''
     def capture_image(self):
         
+        #Define the cameras to use
         if not self.is_grabbing:
             self.cam.StartGrabbing(pylon.GrabStrategy_OneByOne)
-            self.cam2.StartGrabbing(pylon.GrabStrategy_OneByOne) #basler2
+
+            #Second camera if it exists
+            if self.num_cameras > 1:
+                self.cam2.StartGrabbing(pylon.GrabStrategy_OneByOne) #basler2
+
             self.is_grabbing = True
-        try:
+
+        #One camera
+        if self.num_cameras == 1:
             self.cam.ExecuteSoftwareTrigger()
-            self.cam2.ExecuteSoftwareTrigger() #basler2
-
             result = self.cam.RetrieveResult(3000)
-            result2 = self.cam2.RetrieveResult(3000) #basler2
-
             self.img.AttachGrabResultBuffer(result)
-            self.img2.AttachGrabResultBuffer(result2) #basler2
-            
-            if result.GrabSucceeded():# and result2.GrabSucceeded():
-                # Consider if we need to put directly in c_p?
+            if result.GrabSucceeded():
                 image = np.uint8(self.img.GetArray())
-                image2 = np.uint8(self.img2.GetArray()) #basler2
-                tmp = np.zeros(np.shape(image)) #basler2?
-                tmp[0:np.shape(image2)[0],0:np.shape(image2)[1]] = image2 #basler2
-                org_img = np.concatenate((image, tmp), 0) #basler
-                image = np.fliplr(org_img)
                 return image
-             
-        except TimeoutException as TE:
-            print(f"Warning, camera timed out {TE}")
+            else:
+                print("Camera failed to grab an image")
+                return None
 
+        #Two cameras    
+        elif self.num_cameras == 2:
+            self.cam.ExecuteSoftwareTrigger()
+            self.cam2.ExecuteSoftwareTrigger()
+            result = self.cam.RetrieveResult(3000)
+            result2 = self.cam2.RetrieveResult(3000)
+            self.img.AttachGrabResultBuffer(result)
+            self.img2.AttachGrabResultBuffer(result2)
+
+            if result.GrabSucceeded() and result2.GrabSucceeded():
+                image1 = np.uint8(self.img.GetArray())
+                image2 = np.uint8(self.img2.GetArray())
+
+                #If they are the same size, concatenate them horisontally.
+                if image1.shape == image2.shape:
+                    image = np.concatenate((image1, image2), axis = 1)
+                #If they are not the same size, make them the same size and concatenate them horisontally.
+                else:
+                    image = np.zeros((max(image1.shape[0], image2.shape[0]), image1.shape[1]+image2.shape[1]))
+                    image[0:image1.shape[0], 0:image1.shape[1]] = image1
+                    image[0:image2.shape[0], image1.shape[1]:image1.shape[1]+image2.shape[1]] = image2
+
+                return image
+            #exception if one of the cameras fail
+            else:
+                print("One of the two cameras failed to grab an image")
+                return None
+        #except TimeoutException as TE:
+        #    print(f"Warning, camera timed out {TE}")
 
     def connect_camera(self):
         try:
-            
-            #os.environ["PYLON_CAMEMU"] = "1"
-
-            #tlf = pylon.TlFactory.GetInstance() #basler2?
-            #self.cam = pylon.InstantCamera(tlf.CreateFirstDevice()) #basler2?
-            #self.cam.Open() #basler2?
-            
-            #self.cam.ImageFileMode = "On"
-            #self.cam.TestImageSelector = "Off"
-            #self.cam.ImageFilename = r"D:\SiO2_776nmEvery1_3\videos\figs"
-            #self.cam.PixelFormat = "Mono8"
-
             tlf = pylon.TlFactory.GetInstance()
             devices = tlf.EnumerateDevices()
-            self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[0]))
-            self.cam.Open()
-
-            # Adding second camera
-            self.cam2 = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[1]))
-            self.cam2.Open()
-            print("Camera 2 is now open")
-            sleep(0.2)
             
+            #No camera found
+            if len(devices) == 0:
+                self.cam = None
+                raise pylon.RuntimeException("No camera present.")
+    
+            # Adding first camera
+            if len(devices) > 0:
+                self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[0]))
+                self.cam.Open()
+            
+            if len(devices) > 1:
+                self.cam2 = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[1]))
+                self.cam2.Open()
+                print("Camera 2 is now open")
+
+            sleep(0.2)
+            self.num_cameras = len(devices)
+
             return True
         
         except Exception as ex:
@@ -158,8 +181,8 @@ class BaslerCamera(CameraInterface):
 
         except Exception as ex:
             print(f"Exposure time not accepted by camera, {ex}")
-    def get_exposure_time(self):
 
+    def get_exposure_time(self):
         return self.cam.ExposureTime()
 
     def get_fps(self):

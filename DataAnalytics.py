@@ -51,7 +51,7 @@ class HistogramWidget(QWidget):
     def update_histogram(self):
         self.ax.clear()
         if self.data is not None:
-            histdata = np.random.choice(self.data.flatten(), 100000) if len(self.data.flatten()) < 100000 else self.data.flatten()
+            histdata = np.random.choice(self.data.flatten(), 250000) if len(self.data.flatten()) < 250000 else self.data.flatten()
             #Check if histdata is uint8
             if histdata[0].dtype == np.uint8:
                 self.ax.hist(histdata, bins=np.arange(0, 255), color='goldenrod', alpha=0.7)
@@ -96,8 +96,6 @@ class ImageWidgetFFT(QWidget):
         self.ax.set_xlabel('FFT Image')
         self.fig.tight_layout()
         self.canvas.draw()
-
-
 
 class DataAnalytics(QMainWindow):
     def __init__(self, c_p):

@@ -48,6 +48,7 @@ from FieldRecon_Z import FieldAnalyticsZ
 #from ReadArduinoPortenta import PortentaComms
 #import AutoController
 
+
 class Worker(QThread):
     '''
     Worker thread
@@ -116,7 +117,7 @@ class Worker(QThread):
         self.image = np.uint8(self.image)
 
     def subtraction_mode_image(self):
-        
+        "Subtracts the current image from the previous image in the buffer"
         if len(self.buffer) < self.c_p['buffer_size'] and self.c_p['SubtractionMode']:
             self.buffer.append(self.image)
         else:
@@ -134,7 +135,7 @@ class Worker(QThread):
             self.image = self.buffer[-1]
 
     def high_speed_mode_image(self):
-
+        "Downsamples the image to increase the frame rate"
         if self.c_p['HighSpeedMode_method']=='bin':
             self.image = self.image[::int(self.c_p['HighSpeedMode_ds']), ::int(self.c_p['HighSpeedMode_ds'])].astype(np.float32)
         else:
