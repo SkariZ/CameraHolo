@@ -177,7 +177,7 @@ class CameraThread(Thread):
             #img = img[:self.c_p['camera_width'], :self.c_p['camera_height']]
 
 
-            if len(self.buffer)<self.c_p['buffer_size']:
+            if len(self.buffer)<self.c_p['SubtractionBuffer']:
                 self.buffer.append(img)
             else:
                 self.buffer.pop(0)
@@ -199,7 +199,7 @@ class CameraThread(Thread):
                 self.c_p['frame_queue'].put([img, name,
                                              self.c_p['video_format']])
             if count % 20 == 15:
-                self.c_p['fps'] = 10 / (perf_counter()-p_t)
+                self.c_p['fps'] = 11 / (perf_counter()-p_t)
                 
 
 

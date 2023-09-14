@@ -23,30 +23,18 @@ from random import randint
 import numpy as np
 from time import sleep
 from functools import partial
-import gc
+import os
 
 
 import BaslerCameras
 #import ThorlabsCameras
 from CameraControlsNew import CameraThread, VideoWriterThread, CameraClicks
 from ControlParameters import default_c_p, get_data_dicitonary_new
-#from TemperatureControllerTED4015 import TemperatureThread
-#from TemperatureControllerWidget import TempereatureControllerWindow
-#from ReadPicUart import PicReader, PicWriter
-#from LivePlots import PlotWindow
+
 from SaveDataWidget import SaveDataWindow
 from DataAnalytics import DataAnalytics
 from FieldRecon import FieldAnalytics
-from FieldRecon_Z import FieldAnalyticsZ
-#from PIStage import PIStageThread
-#from PIStageWidget import PIStageWidget
-#import MotorControlWidget
-#from LaserPiezosControlWidget import LaserPiezoWidget, MinitweezersLaserMove
-#from DeepLearningThread import MouseAreaSelect, DeepLearningAnalyserLDS, DeepLearningControlWidget
-#from PlanktonViewWidget import PlanktonViewer
-#from DataChannelsInfoWindow import CurrentValueWindow
-#from ReadArduinoPortenta import PortentaComms
-#import AutoController
+
 
 
 class Worker(QThread):
@@ -103,15 +91,16 @@ class Worker(QThread):
             self.data_channels['Z-position'].put_data(np.random.rand() * 2 - 1)
             self.data_channels['Motor_position'].put_data((self.data_channels['Time'].get_data(1) / 10) + np.random.rand())
 
-    #def draw_particle_positions(self, centers):
-    #    # TODO add function also for crosshair to help with alignment.
-    #    rx = int(250/self.c_p['image_scale'])
-    #    ry = rx
-    #    self.qp.setPen(self.red_pen)
-    #    for pos in centers:
-    #        x = int(pos[0]/ self.c_p['image_scale']) # Which is which?
-    #        y = int(pos[1]/ self.c_p['image_scale'])
-    #        self.qp.drawEllipse(x-int(rx/2)-1, y-int(ry/2)-1, rx, ry)
+    def draw_particle_positions(self, centers):
+        # TODO add function also for crosshair to help with alignment.
+        rx = int(250/self.c_p['image_scale'])
+        ry = rx
+        self.qp.setPen(self.red_pen)
+        for pos in centers:
+            x = int(pos[0]/ self.c_p['image_scale']) # Which is which?
+            y = int(pos[1]/ self.c_p['image_scale'])
+
+            self.qp.drawEllipse(x-int(rx/2)-1, y-int(ry/2)-1, rx, ry)
     
     def preprocess_image(self):
         # Check if offset and gain should be applied.
@@ -122,16 +111,15 @@ class Worker(QThread):
             # TODO unacceptably slow
             self.image = (self.image*self.c_p['image_gain'])
 
-        #Ensure that the image is uint8
         self.image = np.uint8(self.image)
 
-    #def draw_central_circle(self):
-    #    self.blue_pen.setColor(QColor('blue'))
-    #    cx = int((self.c_p['camera_width']/2 - self.c_p['AOI'][0])/self.c_p['image_scale'])
-    #    cy = int((self.c_p['camera_height']/2 - self.c_p['AOI'][2])/self.c_p['image_scale'])
-    #    rx=50
-    #    ry=50
-    #    self.qp.drawEllipse(cx-int(rx/2)-1, cy-int(ry/2)-1, rx, ry)
+    def draw_central_circle(self):
+        self.blue_pen.setColor(QColor('blue'))
+        cx = int((self.c_p['camera_width']/2 - self.c_p['AOI'][0])/self.c_p['image_scale'])
+        cy = int((self.c_p['camera_height']/2 - self.c_p['AOI'][2])/self.c_p['image_scale'])
+        rx=50
+        ry=50
+        self.qp.drawEllipse(cx-int(rx/2)-1, cy-int(ry/2)-1, rx, ry)
 
     def run(self):
         # Initialize pens to draw on the images
@@ -172,20 +160,17 @@ class Worker(QThread):
                 W,H,
                 Qt.AspectRatioMode.KeepAspectRatio,
             )
-
             # Give other things time to work, roughly 40-50 fps default.
-            #sleep(0.01) # Sets the FPS
+            sleep(0.1) # Sets the FPS
             
             # Paint extra items on the screen
             self.qp = QPainter(picture)
-
             # Draw zoom in rectangle
             self.c_p['click_tools'][self.c_p['mouse_params'][5]].draw(self.qp)
             self.qp.setPen(self.blue_pen)
 
-            # Draw central circle
-            #if self.c_p['tracking_on']:
-            #    self.draw_particle_positions(self.c_p['predicted_particle_positions'])
+            if self.c_p['tracking_on']:
+                self.draw_particle_positions(self.c_p['predicted_particle_positions'])
 
             self.qp.end()
             self.changePixmap.emit(picture)
@@ -203,7 +188,6 @@ class MainWindow(QMainWindow):
         self.c_p = default_c_p()
         self.data_channels = get_data_dicitonary_new()
         self.video_idx = 0
-
         # Start camera threads
         self.CameraThread = None
         try:
@@ -212,14 +196,16 @@ class MainWindow(QMainWindow):
             
             if camera is not None:
                 self.CameraThread = CameraThread(self.c_p, camera)
+
                 self.CameraThread.start()
 
         except Exception as E:
             print(f"Camera error!\n{E}")
+        #self.TemperatureThread = None
        
         self.VideoWriterThread = VideoWriterThread(2, 'video thread', self.c_p)
         self.VideoWriterThread.start()
-        self.widgets = []
+        self.plot_windows = None
 
         # Set up camera window
         H=int(1024/4)
@@ -232,8 +218,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.label)
         self.label.setMinimumSize(W, H)
         self.painter = QPainter(self.label.pixmap())
-
-        # Start camera thread
         th = Worker(c_p=self.c_p, data=self.data_channels)
         th.changePixmap.connect(self.setImage)
         th.start()
@@ -248,6 +232,7 @@ class MainWindow(QMainWindow):
         self.menu = self.menuBar()
         self.create_filemenu()
         self.drop_down_window_menu()
+        #self.action_menu()
         self.show()
 
     @pyqtSlot(QImage)
@@ -367,26 +352,27 @@ class MainWindow(QMainWindow):
         window_menu = self.menu.addMenu("Windows")
         window_menu.addSeparator()
 
-        # Data analytics window
+        # Add command to open the live plotting window
+        #self.open_plot_window = QAction("Live plotter", self)
+        #self.open_plot_window.setToolTip("Open live plotting window.")
+        #self.open_plot_window.triggered.connect(self.show_new_window)
+        #self.open_plot_window.setCheckable(False)
+        #window_menu.addAction(self.open_plot_window)
+
+        # Add command to open another window...
         self.open_data_window = QAction("Data analytics", self)
         self.open_data_window.setToolTip("Open window for data analytics.")
         self.open_data_window.triggered.connect(self.show_data_analytics_window)
         self.open_data_window.setCheckable(False)
         window_menu.addAction(self.open_data_window)
 
-        #Field reconstruction window 
+        # Add command to open another window... 
         self.open_field_recon_window = QAction("Field reconstruction", self)
         self.open_field_recon_window.setToolTip("Open window for field reconstruction.")
         self.open_field_recon_window.triggered.connect(self.show_field_analytics_window)
         self.open_field_recon_window.setCheckable(False)
         window_menu.addAction(self.open_field_recon_window)
 
-        #Z propagation window
-        self.open_field_recon_window_z = QAction("Field propagation", self)
-        self.open_field_recon_window_z.setToolTip("Open window for propagating field")
-        self.open_field_recon_window_z.triggered.connect(self.show_field_analytics_window_z)
-        self.open_field_recon_window_z.setCheckable(False)
-        window_menu.addAction(self.open_field_recon_window_z)
 
     def set_video_format(self, video_format):
         self.c_p['video_format'] = video_format
@@ -401,11 +387,6 @@ class MainWindow(QMainWindow):
         # Updates the exposure time of the camera to what is inside the textbox
         self.c_p['exposure_time'] = float(self.exposure_time_LineEdit.text())
         self.c_p['new_settings_camera'] = [True, 'exposure_time']
-
-    def set_buffer_size_text(self):
-        # Updates the buffer size of the camera to what is inside the textbox
-        self.c_p['buffer_size'] = int(self.buffer_size_LineEdit.text())
-        self.c_p['new_settings_camera'] = [True, 'buffer_size']
 
     def set_save_path(self):
         fname = QFileDialog.getExistingDirectory(self, "Save path")
@@ -422,7 +403,7 @@ class MainWindow(QMainWindow):
         self.c_p['SubtractionMode'] = not self.c_p['SubtractionMode']
 
     def get_fps(self):
-        self.frame_rate_label.setText("Frame rate: %d\n" % self.c_p['fps'])
+        self.frame_rate_label.setText("Frame rate: %d\n" % self.c_p['fps'])# str(main_window.c_p['fps']))
 
     def ToggleRecording(self):
         # Turns on/off recording
@@ -438,7 +419,8 @@ class MainWindow(QMainWindow):
     def snapshot(self):
         # Captures a snapshot of what the camera is viewing and saves that
         idx = str(self.c_p['image_idx'])
-        filename = self.c_p['recording_path'] + '/'+self.c_p['filename']+'image_' + idx +'.'+ self.c_p['image_format']
+        filename = self.c_p['recording_path'] + '/'+self.c_p['filename']+'image_' + idx +'.'+\
+            self.c_p['image_format']
         if self.c_p['image_format'] == 'npy':
             np.save(filename[:-4], self.c_p['image'])
         else:
@@ -456,6 +438,7 @@ class MainWindow(QMainWindow):
         self.c_p['mouse_params'][3] = e.pos().x()-self.label.pos().x()
         self.c_p['mouse_params'][4] = e.pos().y()-self.label.pos().y()
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseMove()
+
 
     def mousePressEvent(self, e):
         self.c_p['mouse_params'][1] = e.pos().x()-self.label.pos().x()
@@ -475,6 +458,7 @@ class MainWindow(QMainWindow):
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseRelease()
         self.c_p['mouse_params'][0] = 0
 
+
     def mouseDoubleClickEvent(self, e):
         # Double click to move center?
         x = e.pos().x()-self.label.pos().x()
@@ -482,54 +466,33 @@ class MainWindow(QMainWindow):
         print(x*self.c_p['image_scale'] ,y*self.c_p['image_scale'] )
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseDoubleClick()
 
+
+    #def show_new_window(self, checked):
+    #
+    #    if self.plot_windows is None:
+    #        self.plot_windows = []
+
+    #    self.plot_windows.append(PlotWindow(self.c_p, data=self.data_channels, 
+    #                                      x_keys=['Time','Time'], y_keys=['X-force','Y-position']))
+    #    self.plot_windows[-1].show()
+
     def show_data_analytics_window(self, checked):
         self.data_analytics_window = DataAnalytics(self.c_p)
         self.data_analytics_window.show()
-        self.widgets.append(self.data_analytics_window)
 
     def show_field_analytics_window(self, checked):
         self.field_analytics_window = FieldAnalytics(self.c_p)
         self.field_analytics_window.show()
-        self.widgets.append(self.field_analytics_window)
-
-    def show_field_analytics_window_z(self, checked):
-        self.field_analytics_window_z = FieldAnalyticsZ(self.c_p)
-        self.field_analytics_window_z.show()
-        self.widgets.append(self.field_analytics_window_z)
 
     def DataWindow(self):
         self.data_window= SaveDataWindow(self.c_p, self.data_channels)
         self.data_window.show()
-        self.widgets.append(self.data_window)
 
     def closeEvent(self, event):
-        #Close all widgets
-        self.close_all_widgets()
-
-    def close_all_widgets(self):
-        #Close all widgets
-        for widget in self.widgets:
-            widget.close()
-        self.widgets = []
-
-    def flush_memory(self):
-
-        #Close all widgets
-        for widget in self.widgets:
-            widget.close()
-
-            #Stop timers if they exist
-            try: widget.timer.stop() 
-            except: pass
-
-            #Hide widgets if they exist
-            try: widget.hide()
-            except: pass
-
-        self.widgets = []
-
-        #Garbage Collector
-        gc.collect()
+        # TODO close also other widgets here
+        if self.plot_windows is not None:
+            for w in self.plot_windows:
+                w.close()
 
     def __del__(self):
         self.c_p['program_running'] = False
@@ -543,9 +506,6 @@ def create_camera_toolbar_external(main_window):
     main_window.camera_toolbar = QToolBar("Camera tools")
     main_window.addToolBar(main_window.camera_toolbar)
 
-    main_window.camera_toolbar_sec = QToolBar("Secondary tools")
-    main_window.addToolBar(main_window.camera_toolbar_sec)
-
     # main_window.add_camera_actions(main_window.camera_toolbar)
     main_window.zoom_action = QAction("Zoom out", main_window)
     main_window.zoom_action.setToolTip("Resets the field of view of the camera.")
@@ -557,69 +517,40 @@ def create_camera_toolbar_external(main_window):
     main_window.subtraction_action.triggered.connect(main_window.SubtractionMode)
     main_window.subtraction_action.setCheckable(True)
 
-    main_window.flush_action = QAction("Flush memory", main_window)
-    main_window.flush_action.setToolTip("Flushes the memory(closes open widgets and clears data).")
-    main_window.flush_action.triggered.connect(main_window.flush_memory)
-    main_window.flush_action.setCheckable(True)
-
     main_window.record_action = QAction("Record video", main_window)
     main_window.record_action.setToolTip("Turn ON recording.")
     main_window.record_action.setShortcut('Ctrl+R')
     main_window.record_action.triggered.connect(main_window.ToggleRecording)
     main_window.record_action.setCheckable(True)
 
-    #Window for taking snapshot
     main_window.snapshot_action = QAction("Snapshot", main_window)
     main_window.snapshot_action.setToolTip("Take snapshot of camera view.")
     main_window.snapshot_action.setShortcut('Shift+S')
     main_window.snapshot_action.triggered.connect(main_window.snapshot)
     main_window.snapshot_action.setCheckable(False)
 
-    #Window for setting exposure time
     main_window.set_exp_tim = QAction("Set exposure time", main_window)
     main_window.set_exp_tim.setToolTip("Sets exposure time to the value in the textboox")
     main_window.set_exp_tim.triggered.connect(main_window.set_exposure_time)
 
-    #Window for setting buffer size
-    main_window.set_buffer_size = QAction("Set buffer size", main_window)
-    main_window.set_buffer_size.setToolTip("Sets buffer size to use when in subtraction mode")
-    main_window.set_buffer_size.triggered.connect(main_window.set_buffer_size_text)
-
-    main_window.get_frame_rate = QAction("FPS", main_window)
-    main_window.get_frame_rate.setToolTip("Update FPS.")
-    main_window.get_frame_rate.triggered.connect(main_window.get_fps)
-    main_window.get_frame_rate.setCheckable(False)
-
-    #Add actions to first toolbar
     main_window.camera_toolbar.addAction(main_window.zoom_action)
     main_window.camera_toolbar.addAction(main_window.record_action)
     main_window.camera_toolbar.addAction(main_window.snapshot_action)
     main_window.camera_toolbar.addAction(main_window.subtraction_action)
-    main_window.camera_toolbar.addAction(main_window.flush_action)
 
-    #Add actions to second toolbar
-    main_window.camera_toolbar_sec.addAction(main_window.get_frame_rate)
-
-    #Add textboxes to toolbar - These are not actions but settable.
-
-    #First toolbar
     main_window.exposure_time_LineEdit = QLineEdit()
+    main_window.exposure_time_LineEdit.setValidator(QDoubleValidator(0.99,99.99,2))
     main_window.exposure_time_LineEdit.setText(str(main_window.c_p['exposure_time']))
-    main_window.exposure_time_LineEdit.setValidator(QDoubleValidator(0.99,99.99, 2))
-    main_window.camera_toolbar.addAction(main_window.set_exp_tim)
     main_window.camera_toolbar.addWidget(main_window.exposure_time_LineEdit)
-    
-    main_window.buffer_size_LineEdit = QLineEdit()
-    main_window.buffer_size_LineEdit.setValidator(QIntValidator(1,100))
-    main_window.buffer_size_LineEdit.setText(str(main_window.c_p['buffer_size']))
-    main_window.camera_toolbar.addAction(main_window.set_buffer_size)
-    main_window.camera_toolbar.addWidget(main_window.buffer_size_LineEdit)
+    main_window.camera_toolbar.addAction(main_window.set_exp_tim)
 
-    #Secondary toolbar
-    main_window.frame_rate_label = QLabel()
-    main_window.frame_rate_label.setText("Frame rate: %d\n" % main_window.c_p['fps'])
-    main_window.camera_toolbar_sec.addWidget(main_window.frame_rate_label)
-
+    # TODO add offset and label to this        
+    main_window.gain_LineEdit = QLineEdit()
+    main_window.gain_LineEdit.setToolTip("Set software gain on displayed image.")
+    main_window.gain_LineEdit.setValidator(QDoubleValidator(0.1,3,3))
+    main_window.gain_LineEdit.setText(str(main_window.c_p['image_gain']))
+    main_window.gain_LineEdit.textChanged.connect(main_window.set_gain)
+    main_window.camera_toolbar.addWidget(main_window.gain_LineEdit)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

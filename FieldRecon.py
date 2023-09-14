@@ -107,6 +107,7 @@ def imgtofield(img,
     #Correct E_field again
     E_field_corr2 = E_field_corr * np.exp(- 1j * np.median(phase_img2 + np.pi - 1))
     
+
     #Focus the field
     if np.abs(z_prop) > 0:  
         E_field_corr2 = UZ.refocus_field_z(E_field_corr2, z_prop, padding = 256)
@@ -118,7 +119,7 @@ class ReconstructField(QWidget):
         super().__init__()
         self.image = None
         self.precalculated = False
-        
+
         self.fig = Figure()
         self.canvas = FigureCanvas(self.fig)
         self.ax = self.fig.add_subplot(121)
@@ -193,17 +194,16 @@ class ReconstructField(QWidget):
                 first_phase_background = []
                 )
             
-            #-----#Phase#-----#
             imt = self.ax.imshow(np.angle(self.image))
             self.ax.set_xlabel('Phase')
             self.fig.colorbar(imt, cax=self.cax)
 
-            #-----#Background#-----#
+            #-----#
+
             imt2 = self.ax2.imshow(self.bg)
             self.ax2.set_xlabel('Background')
             self.fig.colorbar(imt2, cax=self.cax2)
 
-            #-----#Update the canvas#-----#
             self.fig.tight_layout()
             self.canvas.draw()
 
@@ -212,7 +212,7 @@ class ReconstructField(QWidget):
 class FieldAnalytics(QMainWindow):
     def __init__(self, c_p):
         super().__init__()
-        self.setWindowTitle("Field Analytics")
+        self.setWindowTitle("Data Analytics")
         self.setGeometry(100, 100, 800, 500)
 
         self.Recon_Widget = ReconstructField()
@@ -234,18 +234,24 @@ class FieldAnalytics(QMainWindow):
         #Add a toolbar
         self.toolbar = QToolBar("Options")
         self.addToolBar(self.toolbar)
-        
+
+
         #Add a button to toggle the image FFT
         self.toggle_image_action = QAction("Toggle Image", self)
         self.toggle_image_action.setCheckable(True)
         self.toggle_image_action.setChecked(True)
         self.toggle_image_action.triggered.connect(self.toggle_image_fft)
         self.toolbar.addAction(self.toggle_image_action)
-        
+
         #Add a button for closing the window
         self.close_action = QAction("Close window", self)
         self.close_action.triggered.connect(self.close)
         self.toolbar.addAction(self.close_action)
+
+        #Add a button for setting z value
+        #self.set_z_action = QAction("Set z value", self)
+        #self.set_z_action.triggered.connect(self.set_z)
+        #self.toolbar.addAction(self.set_z_action)
 
     def toggle_image_fft(self):
         if self.toggle_image_action.isChecked():
@@ -259,6 +265,15 @@ class FieldAnalytics(QMainWindow):
 
     def update_data(self, new_data):
         self.Recon_Widget.update_data(new_data)
+
+
+    #def set_z(self):
+    #    z, okPressed = QInputDialog.getDouble(self, "Set z value","z value:", 0, -1000, 1000, 3)
+    #    if okPressed:
+    #        self.z_prop = z
+        #TODO update the image with the new z value   
+            
+
 
     
 
