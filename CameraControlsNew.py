@@ -144,7 +144,6 @@ class CameraThread(Thread):
         # TODO remove temporary solution
         
         self.camera.cam.AcquisitionFrameRateEnable = False
-        # self.camera.cam.AcquisitionFrameRate = 11 
         print("Framrate ", self.camera.cam.ResultingFrameRate())
         
         # Zoom out
@@ -164,8 +163,8 @@ class CameraThread(Thread):
 
     def run(self):
         self.c_p['exposure_time'] = self.camera.get_exposure_time()
+
         count = 0
-        
         while self.c_p['program_running']:
             if self.c_p['new_settings_camera'][0]:
                 self.update_camera_settings()
@@ -187,8 +186,6 @@ class CameraThread(Thread):
             if count % 20 == 15:
                 self.c_p['fps'] = 11 / (perf_counter()-p_t)
                 
-
-
 class VideoFormatError(Exception):
     """
     Raised when a video format is not supported.

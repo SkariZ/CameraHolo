@@ -26,7 +26,7 @@ def default_c_p():
            'click_tools': [],
 
            # Camera c_p
-           'image': np.ones([500, 500]),#, 1]),
+           'image': np.random.randint(0, 255, size = (500, 500)),#, 1]),
            'image_idx': 0, # Index of snapshot image, add also video idx maybe.
            'color': "mono",  # Options are mono and color # Maybe add bit depth too
            'new_settings_camera': [False, None],

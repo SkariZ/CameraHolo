@@ -177,12 +177,13 @@ class Worker(QThread):
                 QT_Image = QImage(self.image, self.image.shape[1],
                                        self.image.shape[0],
                                        QImage.Format.Format_Grayscale8)
+                
                 QT_Image = QT_Image.convertToFormat(QImage.Format.Format_RGB888)
             else:                
                 QT_Image = QImage(self.image, self.image.shape[1],
                                        self.image.shape[0],
                                        QImage.Format.Format_RGB888)
-            print('ok2')    
+                   
             picture = QT_Image.scaled(
                 W, H,
                 Qt.AspectRatioMode.KeepAspectRatio,

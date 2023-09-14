@@ -50,7 +50,7 @@ class BaslerCamera(CameraInterface):
         try:
             self.cam.ExecuteSoftwareTrigger()
             self.cam2.ExecuteSoftwareTrigger() #basler2
-            
+
             result = self.cam.RetrieveResult(3000)
             result2 = self.cam2.RetrieveResult(3000) #basler2
 

@@ -27,7 +27,7 @@ def precalc_Tz (k, zv, K, C):
 
     return [C*np.fft.fftshift(np.exp(k * 1j*z*(K-1))) for z in zv]
 
-def precalc(field, wavelength=0.532):
+def precalc(field=None, shape=None, wavelength=0.532):
     """
     Precalculate some constants for propagating field for faster computations.
 
@@ -42,7 +42,12 @@ def precalc(field, wavelength=0.532):
     
     k = 2* np.pi / wavelength # Wavevector
     
-    yr, xr = field.real.shape
+    if field is not None:
+        yr, xr = field.real.shape
+    elif shape is not None:
+        yr, xr = shape
+    else:
+        raise ValueError('Either field or shape must be specified.')
 
     x = 2 * np.pi/(.114) * np.arange(-(xr/2-1/2), (xr/2 + 1/2), 1)/xr
     y = 2 * np.pi/(.114) * np.arange(-(yr/2-1/2), (yr/2 + 1/2), 1)/yr
@@ -53,9 +58,22 @@ def precalc(field, wavelength=0.532):
     #Create a circular disk here.
     C = np.fft.fftshift(((KXk/k)**2 + (KYk/k)**2 < 1)*1.0)
 
-    return x, y, K, C 
+    return x, y, K, C
+ 
+#Get matrix for propagation.
+def get_Tz(wavelength, zv, shape, padding = 128):
 
-def refocus_field_z(field, z_prop, padding = 0, wavelength = 0.532):
+    shape = (shape[0] + 2*padding, shape[1] + 2*padding)
+    
+    k = 2 * np.pi / wavelength # Wavevector
+    _, _ , K, C = precalc(shape = shape, wavelength = wavelength)
+    
+    #Get matrix for propagation.
+    Tz = precalc_Tz(k, zv, K, C)
+
+    return Tz
+
+def refocus_field_z(field, z_prop, padding = 128, wavelength = 0.532):
     """
     Function for refocusing field.
 
@@ -94,7 +112,7 @@ def refocus_field_z(field, z_prop, padding = 0, wavelength = 0.532):
     return np.squeeze(refocused)
 
 
-def refocus_field(field, steps=51, interval = [-10, 10], padding = 0, wavelength = 0.532):
+def refocus_field_zrange(field, steps=51, interval = [-10, 10], z_range = None, Tz = None, padding = 128, wavelength = 0.532):
     """
     Function for refocusing field.
 
@@ -113,20 +131,24 @@ def refocus_field(field, steps=51, interval = [-10, 10], padding = 0, wavelength
 
     if padding > 0:
         field = np.pad(field, ((padding, padding), (padding, padding)), mode = 'reflect')
+    
+    if z_range is None:
+        zv = np.linspace(interval[0], interval[1], steps)
+    else:
+        zv = z_range
+    
+    if Tz is None:
+        k = 2 * np.pi / wavelength
+        _, _, K, C = precalc(field)
 
-    k = 2 * np.pi / wavelength
-    _, _, K, C = precalc(field)
-    
-    zv = np.linspace(interval[0], interval[1], steps)
-    
-    #Get matrix for propagation.
-    Tz = precalc_Tz(k, zv, K, C)    
+        #Get matrix for propagation.
+        Tz = precalc_Tz(k, zv, K, C)    
     
     #Fourier transform
     f1 = np.fft.fft2(field)
     
     #Stack of different refocused images.
-    refocused =  np.array([np.fft.ifft2(Tz[i]*f1) for i in range(steps)], dtype = np.complex64)
+    refocused =  np.array([np.fft.ifft2(Tz[i]*f1) for i in range(len(zv))], dtype = np.complex64)
     
     if padding > 0:
         refocused = refocused[:, padding:-padding, padding:-padding]
@@ -170,7 +192,7 @@ def find_focus_field(field, steps=51, interval = [-10, 10], m = 'fft', padding=0
             field = field[idx_max[0]-padsize : idx_max[0]+padsize, idx_max[1]-padsize : idx_max[1]+padsize]
 
 
-    field = refocus_field(field, 
+    field = refocus_field_zrange(field, 
                         steps=steps, 
                         interval=interval,
                         padding=padding,

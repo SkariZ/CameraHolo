@@ -130,14 +130,17 @@ class ReconstructField(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
         
-    def update_image(self, data, z, wavelength):
+    def update_image(self, data, z, tz, padding = 256):
         self.ax.clear()
         self.ax2.clear()    
 
         if data is not None:
             #Propagate the field
-            data = UZ.refocus_field_z(data, z, wavelength=wavelength, padding = 256)
-            
+            data = np.fft.ifft2(tz*data)
+
+            if padding > 0:
+                data = data[padding:-padding, padding:-padding]
+
             #-----#Phase#-----#
             imt = self.ax.imshow(data.real)
             self.ax.set_xlabel(f'Real part ({z:.2f}) um')
@@ -187,13 +190,25 @@ class FieldAnalyticsZ(QMainWindow):
         self.Recon_Widget = ReconstructField()
         
         print('Calculating field...')
-        self.field = get_field(c_p['image'])
+        self.field = np.fft.fft2(get_field(c_p['image']))
         print('Field calculated')
 
         #TODO - maybe better to compute all propagations at once and then just scroll through them.
 
         self.z = 0
         self.wavelength = 0.532
+        self.min_z = -10
+        self.max_z = 10
+        self.interval_z = 1
+        self.zvals = np.arange(self.min_z, self.max_z + self.interval_z, self.interval_z) #OBS do not change this.
+        self.TZ = None
+        self.padding = 128
+
+        if self.TZ is None:
+            self.TZ = UZ.get_Tz(self.wavelength, self.zvals, np.shape(self.field), self.padding)
+
+        if self.padding > 0:    
+            self.field = np.pad(self.field, ((self.padding, self.padding), (self.padding, self.padding)), mode = 'reflect')
 
         #Define Side-by-side layout
         layout = QHBoxLayout()
@@ -214,10 +229,10 @@ class FieldAnalyticsZ(QMainWindow):
 
         #Add a scroll bar for z
         self.z_slider = QSlider(Qt.Orientation.Horizontal)
-        self.z_slider.setMinimum(-100.0)
-        self.z_slider.setMaximum(100.0)
+        self.z_slider.setMinimum(self.min_z)
+        self.z_slider.setMaximum(self.max_z)
         self.z_slider.setValue(0.0)
-        self.z_slider.setTickInterval(10)
+        self.z_slider.setTickInterval(self.interval_z)
         self.z_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
 
         self.z_slider.valueChanged.connect(self.set_z)
@@ -240,11 +255,9 @@ class FieldAnalyticsZ(QMainWindow):
         self.toggle_image_action.triggered.connect(self.toggle_image)
         self.toolbar.addAction(self.toggle_image_action)
 
-    #TODO - precalculate Tz matrix and then just multiply with field.
-
     def update_field(self):
-        self.Recon_Widget.update_image(self.field, self.z, self.wavelength)
-
+        self.Recon_Widget.update_image(self.field, self.z, self.TZ[np.argwhere(self.zvals==self.z)[0][0]], padding = self.padding)
+    
     def toggle_image(self):
         if self.toggle_image_action.isChecked():
             self.Recon_Widget.show()
@@ -252,14 +265,15 @@ class FieldAnalyticsZ(QMainWindow):
             self.Recon_Widget.hide()
 
     def set_z(self):
-        self.z = self.z_slider.value()/10
+        self.z = self.z_slider.value()
         self.update_field()
 
     def set_wavelength(self):
         wavelength, ok = QInputDialog.getDouble(self, 'Set wavelength', 'Enter wavelength um:', decimals = 3)
 
         if ok:
-            self.wavelength = wavelength        
+            self.wavelength = wavelength
+            self.TZ = UZ.get_Tz(wavelength, self.zvals, np.shape(self.field), self.padding)        
     
             
 
