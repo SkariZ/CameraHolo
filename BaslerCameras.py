@@ -21,6 +21,7 @@ class BaslerCamera(CameraInterface):
         self.img2 = pylon.PylonImage()
         self.cam = None
         self.cam2 = None
+        self.num_cameras =  len(pylon.TlFactory.GetInstance().EnumerateDevices())
     '''
     def capture_image(self):
         
@@ -51,11 +52,10 @@ class BaslerCamera(CameraInterface):
             #Second camera if it exists
             if self.num_cameras > 1:
                 self.cam2.StartGrabbing(pylon.GrabStrategy_OneByOne) #basler2
-
             self.is_grabbing = True
 
         #One camera
-        if self.num_cameras == 1:
+        if self.num_cameras == 1 and self.camera_mode == 'cam1':
             self.cam.ExecuteSoftwareTrigger()
             result = self.cam.RetrieveResult(3000)
             self.img.AttachGrabResultBuffer(result)
@@ -130,6 +130,8 @@ class BaslerCamera(CameraInterface):
         self.stop_grabbing()
         self.cam.Close()
         self.cam = None
+        self.cam2.Close()
+        self.cam2 = None
 
     def stop_grabbing(self):
         try:
@@ -173,6 +175,8 @@ class BaslerCamera(CameraInterface):
 
         except Exception as ex:
             print(f"AOI not accepted, AOI: {AOI}, error {ex}")
+    def set_camera_mode(self, mode):
+        self.camera_mode = mode
 
     def set_exposure_time(self, exposure_time):
         self.stop_grabbing()
@@ -190,6 +194,12 @@ class BaslerCamera(CameraInterface):
         return fps
 
     def get_sensor_size(self):
-        width = int(self.cam.Width.GetMax())
-        height = int(self.cam.Height.GetMax())
+        if self.num_cameras == 1:
+            width = int(self.cam.Width.GetMax())
+            height = int(self.cam.Height.GetMax())
+        elif self.num_cameras == 2:
+            width = int(self.cam.Width.GetMax()) + int(self.cam2.Width.GetMax())
+            height = int(self.cam.Height.GetMax())
         return width, height
+
+

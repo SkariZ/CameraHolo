@@ -191,7 +191,7 @@ class Worker(QThread):
             )
 
             # Give other things time to work, roughly 40-50 fps default.
-            sleep(0.1)
+            sleep(0.3)
 
             # Paint extra items on the screen
             self.qp = QPainter(picture)
@@ -227,6 +227,13 @@ class MainWindow(QMainWindow):
                 self.CameraThread = CameraThread(self.c_p, camera)
                 self.CameraThread.start()
 
+            #Count the number of cameras connected so we know if we can use dual camera mode
+            c = 0
+            if camera.cam is not None: c += 1
+            if camera.cam2 is not None: c += 1
+            self.c_p['num_cameras'] = c
+            print(f"Number of cameras connected: {c}")
+
         except Exception as E:
             print(f"Camera error!\n{E}")
        
@@ -260,6 +267,7 @@ class MainWindow(QMainWindow):
         self.menu = self.menuBar()
         self.create_filemenu()
         self.drop_down_window_menu()
+        self.create_cameramenu()
         self.show()
 
     @pyqtSlot(QImage)
@@ -304,6 +312,19 @@ class MainWindow(QMainWindow):
         except ValueError:
             # Harmless, someone deleted all the numbers in the line-edit
             pass
+    def create_cameramenu(self):
+        cemera_menu = self.menu.addMenu("Camera")
+        cemera_menu.addSeparator()
+
+        #Create a submenu for setting camera mode.
+        mode_submenu = cemera_menu.addMenu("Camera mode")
+        modes = ['cam1', 'cam2', 'both']
+        for mode in modes:
+            mode_command = partial(self.set_camera_mode, mode)
+            mode_action = QAction(mode, self)
+            mode_action.setStatusTip(f"Set camera mode to {mode}")
+            mode_action.triggered.connect(mode_command)
+            mode_submenu.addAction(mode_action)
 
     def create_filemenu(self):
 
@@ -417,6 +438,11 @@ class MainWindow(QMainWindow):
         # Updates the buffer size of the camera to what is inside the textbox
         self.c_p['buffer_size'] = int(self.buffer_size_LineEdit.text())
         self.c_p['new_settings_camera'] = [True, 'buffer_size']
+
+    def set_camera_mode(self, mode):
+        # Updates the camera mode to what is inside the textbox
+        self.c_p['camera_mode'] = mode
+        self.c_p['new_settings_camera'] = [True, 'camera_mode']
 
     def set_save_path(self):
         fname = QFileDialog.getExistingDirectory(self, "Save path")

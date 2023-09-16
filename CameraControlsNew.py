@@ -157,7 +157,7 @@ class CameraThread(Thread):
             self.camera.set_AOI(self.c_p['AOI'])
         elif self.c_p['new_settings_camera'][1] == 'exposure_time':
             self.camera.set_exposure_time(self.c_p['exposure_time'])
-
+            
         # Resetting the new_settings_camera parameter
         self.c_p['new_settings_camera'] = [False, None]
 
@@ -172,8 +172,17 @@ class CameraThread(Thread):
             if count % 20 == 5:
                 p_t = perf_counter()
 
+            #Here the image is captured. If two cameras are connected it will always read both.
             img=self.camera.capture_image()
-            self.c_p['image'] = img
+            
+            if self.c_p['camera_mode'] == 'cam1':
+                self.c_p['image'] = img
+                if self.c_p['num_cameras']==2: 
+                    self.c_p['image'] = img[:, :img.shape[1]//2]
+            elif self.c_p['camera_mode'] == 'cam2' and self.c_p['num_cameras']==2:
+                self.c_p['image'] = img[:, img.shape[1]//2:]
+            elif self.c_p['camera_mode'] == 'both' and self.c_p['num_cameras']==2:
+                self.c_p['image'] = img
 
             if self.c_p['image'] is None:
                 print("None image error!!?!?")
