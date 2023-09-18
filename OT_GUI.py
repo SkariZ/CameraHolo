@@ -74,35 +74,6 @@ class Worker(QThread):
         self.kwargs = kwargs
         self.test_mode = test_mode
         self.buffer = []
-        # self.signals = WorkerSignals()
-
-    def testDataUpdate(self, max_length=10_000):
-        # Fill data dicitonary with fake data to test the interface.
-        # Used only for testing
-        self.dt = 1000/max_length
-
-        if len(self.data_channels['Time'].data) < max_length:
-            self.data_channels['Time'].put_data(np.linspace(0, 1000, num=max_length))
-            self.data_channels['Y-force'].put_data(np.sin(self.data_channels['Time'].data / 10))
-            self.data_channels['X-force'].put_data(np.cos(self.data_channels['Time'].data / 10))
-            self.data_channels['Z-force'].put_data(np.cos(self.data_channels['Time'].data / 10)**2)
-            self.data_channels['X-position'].put_data(self.c_p['stepper_current_position'][0])
-            self.data_channels['Y-position'].put_data(self.c_p['stepper_current_position'][1])
-            self.data_channels['Z-position'].put_data(np.random.rand(max_length) * 2 - 1)
-            self.data_channels['Motor_position'].put_data(np.sin(self.data_channels['Time'].data / 10))
-        else:
-            # Shift the data
-            # Update last element
-            self.data_channels['Time'].put_data(self.data_channels['Time'].get_data(1) + self.dt)
-
-            self.data_channels['Y-force'].put_data(np.sin(self.data_channels['Time'].get_data(1) / 10))
-            self.data_channels['X-force'].put_data(np.cos(self.data_channels['Time'].get_data(1) / 10))
-            self.data_channels['Z-force'].put_data(np.cos(self.data_channels['Time'].get_data(1) / 10)**2)
-
-            self.data_channels['X-position'].put_data(self.c_p['stepper_current_position'][0])
-            self.data_channels['Y-position'].put_data(self.c_p['stepper_current_position'][1])
-            self.data_channels['Z-position'].put_data(np.random.rand() * 2 - 1)
-            self.data_channels['Motor_position'].put_data((self.data_channels['Time'].get_data(1) / 10) + np.random.rand())
 
     def preprocess_image(self):
         # Check if offset and gain should be applied.
@@ -151,8 +122,6 @@ class Worker(QThread):
         self.red_pen.setWidth(2)
 
         while True:
-            if self.test_mode:
-                self.testDataUpdate()
             if self.c_p['image'] is not None:
                 self.image = np.array(self.c_p['image'])
             else:
@@ -190,7 +159,7 @@ class Worker(QThread):
             )
 
             # Give other things time to work, roughly 40-50 fps default.
-            sleep(0.3)
+            sleep(0.2)
 
             # Paint extra items on the screen
             self.qp = QPainter(picture)
@@ -329,6 +298,14 @@ class MainWindow(QMainWindow):
             mode_action.triggered.connect(mode_command)
             mode_submenu.addAction(mode_action)
 
+        # Create a submenu for setting exact region of interest
+        AOI_submenu = cemera_menu.addMenu("Set AOI")
+        AOI_command = partial(self.set_AOI)
+        AOI_action = QAction("Set AOI", self)
+        AOI_action.setStatusTip("Set exact region of interest")
+        AOI_action.triggered.connect(AOI_command)
+        AOI_submenu.addAction(AOI_action)
+
     def create_filemenu(self):
 
         file_menu = self.menu.addMenu("File")
@@ -446,6 +423,15 @@ class MainWindow(QMainWindow):
         # Updates the camera mode to what is inside the textbox
         self.c_p['camera_mode'] = mode
         self.c_p['new_settings_camera'] = [True, 'camera_mode']
+
+    def set_AOI(self):
+        #Prompt a box to enter the AOI
+        AOI, ok = QInputDialog.getText(self, 'AOI dialog', 'Enter AOI as x, x2, y, y2:')
+        if ok:
+            AOI = AOI.split(',')
+            AOI = [int(x) for x in AOI]
+            self.c_p['AOI'] = AOI
+            self.c_p['new_settings_camera'] = [True, 'AOI']
 
     def set_cam_size(self):
         pass
@@ -672,6 +658,10 @@ def create_camera_toolbar_external(main_window):
     main_window.frame_rate_label = QLabel()
     main_window.frame_rate_label.setText("Frame rate: %d\n" % main_window.c_p['fps'])
     main_window.camera_toolbar_sec.addWidget(main_window.frame_rate_label)
+
+
+
+
 
 
 if __name__ == '__main__':

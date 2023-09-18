@@ -122,13 +122,13 @@ class BaslerCamera(CameraInterface):
                 self.cam2.Open()
                 print("Camera 2 is now open")
 
-            sleep(0.2)
             self.num_cameras = len(devices)
             self.cam1_max_width = self.cam.Width.GetMax()
             self.cam1_max_height = self.cam.Height.GetMax()
             if self.num_cameras > 1:
                 self.cam2_max_width = self.cam2.Width.GetMax()
-                self.cam2_max_height = self.cam2.Height.GetMax()
+                self.cam2_max_height = self.cam2.Height.GetMax()    
+            sleep(0.1)
 
             return True
         
