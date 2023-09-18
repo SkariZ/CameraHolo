@@ -158,6 +158,8 @@ class BaslerCamera(CameraInterface):
         AOI = [x1, x2, y1, y2]
 
         if two cameras are used, the AOI is set to the same area of the both cameras
+
+        //Updated. Fredrik
         '''
         self.stop_grabbing()
 
@@ -267,15 +269,4 @@ class BaslerCamera(CameraInterface):
 
         return width, height, width2, height2
 
-    def set_cam_size(self, width, height):
-        self.stop_grabbing()
-        try:
-            self.cam.Width = width
-            self.cam.Height = height
 
-            if self.num_cameras == 2:
-                self.cam2.Width = width
-                self.cam2.Height = height
-
-        except Exception as ex:
-            print(f"Camera size not accepted by camera, {ex}")

@@ -284,6 +284,7 @@ class MainWindow(QMainWindow):
         except ValueError:
             # Harmless, someone deleted all the numbers in the line-edit
             pass
+        
     def create_cameramenu(self):
         cemera_menu = self.menu.addMenu("Camera")
         cemera_menu.addSeparator()
@@ -432,10 +433,6 @@ class MainWindow(QMainWindow):
             AOI = [int(x) for x in AOI]
             self.c_p['AOI'] = AOI
             self.c_p['new_settings_camera'] = [True, 'AOI']
-
-    def set_cam_size(self):
-        pass
-        #Todo
 
     def set_save_path(self):
         fname = QFileDialog.getExistingDirectory(self, "Save path")
