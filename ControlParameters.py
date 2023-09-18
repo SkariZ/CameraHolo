@@ -30,8 +30,17 @@ def default_c_p():
            'image_idx': 0, # Index of snapshot image, add also video idx maybe.
            'color': "mono",  # Options are mono and color # Maybe add bit depth too
            'new_settings_camera': [False, None],
+
+            # Camera sizes. These are the default values for the Basler camera
+
+            #Camera 1
            'camera_width': 1920,
            'camera_height': 1280,
+           
+           #Camera 2
+           'camera_width2': 1920,
+           'camera_height2': 1280,
+
            'recording': False,
            'exposure_time': 5000,
            'fps': 50,  # Frames per second of camera
@@ -50,7 +59,7 @@ def default_c_p():
            
             #Settings for subtraction mode              
             'SubtractionMode':False,
-            'buffer_size': 8,
+            'buffer_size': 5,
 
             #Settings for HighSpeedMode
             'HighSpeedMode':False,

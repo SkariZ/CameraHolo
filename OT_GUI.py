@@ -153,7 +153,6 @@ class Worker(QThread):
         while True:
             if self.test_mode:
                 self.testDataUpdate()
-
             if self.c_p['image'] is not None:
                 self.image = np.array(self.c_p['image'])
             else:
@@ -232,6 +231,10 @@ class MainWindow(QMainWindow):
             if camera.cam is not None: c += 1
             if camera.cam2 is not None: c += 1
             self.c_p['num_cameras'] = c
+
+            if c == 1: self.c_p['camera_mode'] = 'cam1'
+            elif c == 2: self.c_p['camera_mode'] = 'both'
+
             print(f"Number of cameras connected: {c}")
 
         except Exception as E:
@@ -244,7 +247,7 @@ class MainWindow(QMainWindow):
         # Set up camera window. This is just how it looks once starting.
         H=int(1024/4)
         W=int(1024)
-        sleep(0.5)
+        sleep(0.1)
 
         self.c_p['frame_size'] = int(self.c_p['camera_width']/2), int(self.c_p['camera_height']/2)
         self.label = QLabel("Hello")
@@ -444,6 +447,10 @@ class MainWindow(QMainWindow):
         self.c_p['camera_mode'] = mode
         self.c_p['new_settings_camera'] = [True, 'camera_mode']
 
+    def set_cam_size(self):
+        pass
+        #Todo
+
     def set_save_path(self):
         fname = QFileDialog.getExistingDirectory(self, "Save path")
         if len(fname) > 3:
@@ -451,8 +458,7 @@ class MainWindow(QMainWindow):
             self.c_p['recording_path'] = fname
 
     def ZoomOut(self):
-        self.c_p['AOI'] = [0, self.c_p['camera_width'], 0,
-                   self.c_p['camera_height']]
+        self.c_p['AOI'] = [0, self.c_p['camera_width'], 0, self.c_p['camera_height']]
         self.c_p['new_settings_camera'] = [True, 'AOI']
 
     def SubtractionMode(self):

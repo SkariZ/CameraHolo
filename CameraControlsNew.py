@@ -136,13 +136,19 @@ class CameraThread(Thread):
         """
         Thread.__init__(self)
         self.camera = camera
-        # TODO check that camera implements the correct interface
+
         self.camera.connect_camera()
-        c_p['camera_width'], c_p['camera_height'] = camera.get_sensor_size()
+        c_p['camera_width'], c_p['camera_height'], c_p['camera_width2'], c_p['camera_height2'] = camera.get_sensor_size()
+
+        #Initialize
+        self.tmp_height_cam1 = c_p['camera_height']
+        self.tmp_width_cam1 = c_p['camera_width']
+        self.tmp_width_cam2 = c_p['camera_width2']
+        self.tmp_height_cam2 = c_p['camera_height2']
+
         self.c_p = c_p
 
         # TODO remove temporary solution
-        
         self.camera.cam.AcquisitionFrameRateEnable = False
         print("Framrate ", self.camera.cam.ResultingFrameRate())
         
@@ -150,14 +156,25 @@ class CameraThread(Thread):
         self.c_p['AOI'] = [0, self.c_p['camera_width'], 0,
                    self.c_p['camera_height']]
         self.c_p['new_settings_camera'] = [True, 'AOI']
+        
         self.setDaemon(True)
 
     def update_camera_settings(self):
         if self.c_p['new_settings_camera'][1] == 'AOI':
             self.camera.set_AOI(self.c_p['AOI'])
+
+            #Update the temporary values of width and height. Assuming same camera size for both cameras
+            self.tmp_width_cam1 = self.c_p['AOI'][1] - self.c_p['AOI'][0]
+            self.tmp_height_cam1 = self.c_p['AOI'][3] - self.c_p['AOI'][2]
+            self.tmp_width_cam2 = self.c_p['AOI'][1] - self.c_p['AOI'][0]
+            self.tmp_height_cam2 = self.c_p['AOI'][3] - self.c_p['AOI'][2]
+
         elif self.c_p['new_settings_camera'][1] == 'exposure_time':
             self.camera.set_exposure_time(self.c_p['exposure_time'])
-            
+
+        elif self.c_p['new_settings_camera'][1] == 'set_cam_size':
+            self.camera.set_cam_size(self.c_p['camera_mode'])
+
         # Resetting the new_settings_camera parameter
         self.c_p['new_settings_camera'] = [False, None]
 
@@ -176,16 +193,17 @@ class CameraThread(Thread):
             img=self.camera.capture_image()
             
             if self.c_p['camera_mode'] == 'cam1':
-                self.c_p['image'] = img
                 if self.c_p['num_cameras']==2: 
-                    self.c_p['image'] = img[:, :img.shape[1]//2]
+                    self.c_p['image'] = img[:self.tmp_height_cam1, :self.tmp_width_cam1]
+                else:
+                    self.c_p['image'] = img
             elif self.c_p['camera_mode'] == 'cam2' and self.c_p['num_cameras']==2:
-                self.c_p['image'] = img[:, img.shape[1]//2:]
+                self.c_p['image'] = img[:self.tmp_height_cam2, self.tmp_width_cam1:]
             elif self.c_p['camera_mode'] == 'both' and self.c_p['num_cameras']==2:
                 self.c_p['image'] = img
 
-            if self.c_p['image'] is None:
-                print("None image error!!?!?")
+            #if self.c_p['image'] is None:
+            #    print("None image error!!?!?")
 
             if self.c_p['recording']:
                 img = copy(self.c_p['image'])
