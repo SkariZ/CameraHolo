@@ -1,196 +1,33 @@
 import sys
 from PyQt6.QtWidgets import (
-    QMainWindow, QCheckBox, QComboBox, QListWidget, QLineEdit,
-    QLineEdit, QSpinBox, QDoubleSpinBox, QSlider, QToolBar,
-    QPushButton, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QInputDialog,
+    QMainWindow, QLineEdit, QToolBar,
+    QPushButton, QVBoxLayout, QWidget, QLabel, QVBoxLayout, QSlider, QInputDialog
 )
 
 from PyQt6.QtCore import QTimer, Qt
 
-
-from pyqtgraph import PlotWidget, plot
 import pyqtgraph as pg
 from random import randint
 
-import numpy as np
-from functools import partial
+import numpy as np, gc
 
-from PyQt6.QtWidgets import (
- QCheckBox, QVBoxLayout, QWidget, QLabel, QTableWidget, QTableWidgetItem,
-)
-
-# from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QVBoxLayout, QWidget, QLabel
 from PyQt6.QtGui import QAction
-from PyQt6.QtCore import QTimer
-from PyQt6.QtCore import Qt
 
-import matplotlib
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from Utils import phase_utils as P
 from Utils import Utils_z as UZ
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-def imgtofield(img, 
-               G, 
-               polynomial, 
-               kx_add_ky,
-               if_lowpass_b = False, 
-               cropping=50,
-               mask_f = [], # sinc, jinc etc.
-               z_prop = 0,
-               masks = [],
-               add_phase_corrections = 0,
-               first_phase_background = []
-               ):
-    
-    """ 
-    Function for constructing optical field.
-   
-    """
-    #Scale image by its mean
-    img = np.array(img, dtype = np.float32) 
-    img = img - np.mean(img) #img = img - np.mean(img)
-    
-    #Compute the 2-dimensional discrete Fourier Transform with offset image.
-    fftImage = np.fft.fft2(img * np.exp(1j*(kx_add_ky)))
-
-    #shifted fourier image centered on peak values in x and y. 
-    fftImage = np.fft.fftshift(fftImage)
-    
-    #Sets values outside the defined circle to zero. Ie. take out the information for this peak.
-    fftImage2 = fftImage * masks[0] 
-
-    #If we have a weighted function. E.g sinc or jinc.
-    if len(mask_f)>0: fftImage2 = fftImage2 * mask_f
-    
-    #Shift the zero-frequency component to the center of the spectrum.
-    E_field = np.fft.fftshift(fftImage2)
-
-    #Inverse 2-dimensional discrete Fourier Transform
-    E_field = np.fft.ifft2(E_field) 
-
-    #Removes edges in x and y. Some edge effects
-    if cropping>0:
-        E_field_cropped = E_field[cropping:-cropping, cropping:-cropping]
-    else:
-        E_field_cropped = E_field
-    
-    #If we use the same first phase background correction on all the data.
-    if len(first_phase_background)>0:
-        E_field_cropped = E_field_cropped * np.exp( -1j * first_phase_background)
-    
-    #Lowpass filtered phase
-    if if_lowpass_b:
-        phase_img = P.phase_frequencefilter(fftImage2, mask = masks[1] , is_field = False, crop = cropping) 
-    else:
-        phase_img  = np.angle(E_field_cropped) #Returns the angle of the complex argument (phase)
-    
-    # Get the phase background from phase image.
-    phase_background = P.correct_phase_4order(phase_img, G, polynomial)
-    E_field_corr = E_field_cropped * np.exp( -1j * phase_background)
-
-    #Do additional background fit. Always lowpass
-    if add_phase_corrections>0 and if_lowpass_b:
-        for _ in range(add_phase_corrections):
-            phase_img = P.phase_frequencefilter(E_field_corr, mask = masks[2], is_field = True) 
-            phase_background = P.correct_phase_4order(phase_img, G, polynomial)
-            E_field_corr =  E_field_corr * np.exp( -1j * phase_background)
-    
-    #Lowpass filtered phase
-    if if_lowpass_b:
-        phase_img2 = P.phase_frequencefilter(E_field_corr, mask = masks[3], is_field = True)  
-    else:
-        phase_img2 = np.angle(E_field_corr)
-    
-    #Correct E_field again
-    E_field_corr2 = E_field_corr * np.exp(- 1j * np.median(phase_img2 + np.pi - 1))
-    
-    #Focus the field
-    if np.abs(z_prop) > 0:  
-        E_field_corr2 = UZ.refocus_field_z(E_field_corr2, z_prop, padding = 256)
-        
-    return E_field_corr2, phase_background# E_field_corr2
-
-class ReconstructField(QWidget):
-    def __init__(self):
-        super().__init__()
-        
-        self.fig = Figure()
-        self.canvas = FigureCanvas(self.fig)
-        self.ax = self.fig.add_subplot(121)
-        self.ax2 = self.fig.add_subplot(122)
-
-        self.cax= make_axes_locatable(self.ax).append_axes('right', size='5%', pad=0.05)
-        self.cax2= make_axes_locatable(self.ax2).append_axes('right', size='5%', pad=0.05)
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.canvas)
-        self.setLayout(layout)
-        
-    def update_image(self, data, z, tz, padding = 128):
-        self.ax.clear()
-        self.ax2.clear()    
-
-        if data is not None:
-            #Propagate the field
-            data = np.fft.ifft2(tz*data)
-
-            if padding > 0:
-                data = data[padding:-padding, padding:-padding]
-
-            #-----#Phase#-----#
-            imt = self.ax.imshow(data.real)
-            self.ax.set_xlabel(f'Real part ({z:.2f}) um')
-            self.fig.colorbar(imt, cax=self.cax)
-
-            #-----#Background#-----#
-            imt2 = self.ax2.imshow(data.imag)
-            self.ax2.set_xlabel(f'Imag part ({z:.2f}) um')
-            self.fig.colorbar(imt2, cax=self.cax2)
-
-            #-----#Update the canvas#-----#
-            self.fig.tight_layout()
-            self.canvas.draw()
-
-def get_field(image):
-        _, _, _, _, _, G, polynomial, _, _, __, kx_add_ky, _, masks, _, _  = P.pre_calculations(
-        image, 
-        filter_radius = [], 
-        cropping = 0, 
-        mask_radie = [], 
-        case = 'ellipse', 
-        first_phase_background = 0,
-        mask_out = True)
-
-        #Get the field
-        E_field, _ = imgtofield(
-                image, 
-                G, 
-                polynomial, 
-                kx_add_ky,
-                if_lowpass_b = False,
-                cropping = 0,  
-                mask_f = [],
-                z_prop = 0,
-                masks = masks,
-                add_phase_corrections= 0,
-                first_phase_background = []
-                )
-        return E_field
 
 class FieldAnalyticsZ(QMainWindow):
     def __init__(self, c_p):
         super().__init__()
         self.setWindowTitle("Field Analytics")
-        self.setGeometry(100, 100, 800, 500)
-
-        self.Recon_Widget = ReconstructField()
-        
+        self.setGeometry(100, 100, 800, 800)
         print('Calculating field...')
-        self.field = np.fft.fft2(get_field(c_p['image']))
+        self.c_p = c_p
+        self.image_size = c_p['image'].shape
+        self.get_field(self.c_p['image'][:self.image_size[0], :self.image_size[1]])
+        self.field = np.fft.fft2(self.field)
         print('Field calculated')
 
         self.z = 0
@@ -201,29 +38,30 @@ class FieldAnalyticsZ(QMainWindow):
         self.zvals = np.arange(self.min_z, self.max_z + self.interval_z, self.interval_z) #OBS do not change this.
         self.TZ = None
         self.padding = 128
+        self.image_case = 'real'
 
         if self.padding > 0 and self.TZ is None:    
             self.field = np.pad(self.field, ((self.padding, self.padding), (self.padding, self.padding)), mode = 'reflect')
         if self.TZ is None:
             self.TZ = UZ.get_Tz(self.wavelength, self.zvals, np.shape(self.field), padding = 0)
 
-        #Define Side-by-side layout
-        layout = QHBoxLayout()
-        layout.addWidget(self.Recon_Widget)
+        self.cmap = pg.colormap.get('CET-L9')
 
-        #Add the layout to the container
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        layout = QVBoxLayout(central_widget)
+
+        # Create an ImageView for the image 1
+        self.image_widget = pg.ImageView(
+            view=pg.PlotItem()
+            )
+        layout.addWidget(self.image_widget)
 
         #Add a toolbar
         self.toolbar = QToolBar("Options")
         self.addToolBar(self.toolbar)
         
-        #Add toolbar for z, place below toolbar
-        self.toolbar_z = QToolBar("Z options")
-        self.addToolBar(self.toolbar_z)
-
         #Add a scroll bar for z
         self.z_slider = QSlider(Qt.Orientation.Horizontal)
         self.z_slider.setMinimum(self.min_z)
@@ -231,51 +69,195 @@ class FieldAnalyticsZ(QMainWindow):
         self.z_slider.setValue(0.0)
         self.z_slider.setTickInterval(self.interval_z)
         self.z_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-
+        self.z_slider.setSingleStep(self.interval_z)
         self.z_slider.valueChanged.connect(self.set_z)
-        self.toolbar_z.addWidget(self.z_slider)
+        layout.addWidget(self.z_slider)
 
         #Add a button for setting the wavelength
         self.set_wavelength_action = QAction("Set wavelength", self)
         self.set_wavelength_action.triggered.connect(self.set_wavelength)
         self.toolbar.addAction(self.set_wavelength_action)
 
-        #Add a button for updating the field
+        #Add a box to set image-size (row col) to toolbar
+        self.image_size_label = QLabel(self)
+        self.image_size_label.setText("Image size (row, col) ")
+        self.toolbar.addWidget(self.image_size_label)
+        self.image_size_box = QLineEdit(self)
+        self.image_size_box.move(20, 20)
+        self.image_size_box.resize(280,40)
+        self.image_size_box.setText(str(self.image_size))
+        self.image_size_box.textChanged.connect(self.on_image_size_changed)
+        self.toolbar.addWidget(self.image_size_box)
+                
+        #Button to recalulate the field
         self.update_field_action = QAction("Update field", self)
         self.update_field_action.triggered.connect(self.update_field)
         self.toolbar.addAction(self.update_field_action)
 
-        #Add a button to toggle the image
-        self.toggle_image_action = QAction("Toggle Image", self)
-        self.toggle_image_action.setCheckable(True)
-        self.toggle_image_action.setChecked(True)
-        self.toggle_image_action.triggered.connect(self.toggle_image)
-        self.toolbar.addAction(self.toggle_image_action)
+        #Add a button to toggle grayscale colormap
+        self.button2 = QPushButton("Grayscale")
+        self.button2.clicked.connect(self.on_click_cmap)
+        layout.addWidget(self.button2)
 
+        #Add 4 buttons to toggle image case
+        self.button3 = QPushButton("Real")
+        self.button3.clicked.connect(self.on_click_image_case)
+        layout.addWidget(self.button3)
+        self.button4 = QPushButton("Imaginary")
+        self.button4.clicked.connect(self.on_click_image_case)
+        layout.addWidget(self.button4)
+        self.button5 = QPushButton("Amplitude")
+        self.button5.clicked.connect(self.on_click_image_case)
+        layout.addWidget(self.button5)
+        self.button6 = QPushButton("Phase")
+        self.button6.clicked.connect(self.on_click_image_case)
+        layout.addWidget(self.button6)
+
+        #Add a box to the toolbar that shows the current z
+        self.z_label = QLabel(self)
+        self.z_label.setText("z = " + str(self.z))
+        self.toolbar.addWidget(self.z_label)
+        #make sure the label is updated when z is changed
+        self.z_slider.valueChanged.connect(self.update_z_label)
+
+
+        #Make the button smaller horizontally
+        self.button2.setMaximumWidth(100)
+        self.button3.setMaximumWidth(100)
+        self.button4.setMaximumWidth(100)
+        self.button5.setMaximumWidth(100)
+        self.button6.setMaximumWidth(100)
+        self.image_size_box.setMaximumWidth(200)
+        self.z_label.setMaximumWidth(100)
+        
     def update_field(self):
-        self.Recon_Widget.update_image(self.field, self.z, self.TZ[np.argwhere(self.zvals==self.z)[0][0]], padding = self.padding)
-    
-    def toggle_image(self):
-        if self.toggle_image_action.isChecked():
-            self.Recon_Widget.show()
-        else:
-            self.Recon_Widget.hide()
-
-    def set_z(self):
-        self.z = self.z_slider.value()
-        self.update_field()
+        self.get_field(self.c_p['image'][:self.image_size[0], :self.image_size[1]])
+        self.field = np.fft.fft2(self.field)
+        self.TZ = UZ.get_Tz(self.wavelength, self.zvals, np.shape(self.field), padding = 0)
 
     def set_wavelength(self):
         wavelength, ok = QInputDialog.getDouble(self, 'Set wavelength', 'Enter wavelength um:', decimals = 3)
 
         if ok:
             self.wavelength = wavelength
-            self.TZ = UZ.get_Tz(wavelength, self.zvals, np.shape(self.field), self.padding)        
-    
+            self.TZ = UZ.get_Tz(wavelength, self.zvals, np.shape(self.field), self.padding)   
+
+    def set_z(self):
+        self.z = self.z_slider.value()
+        self.update_data()
+
+    def update_data(self):
+
+        if self.field is not None:
+            curr_field = np.fft.ifft2(
+                self.field * self.TZ[np.argwhere(self.zvals==self.z)[0][0]]
+                ).T
+            if self.padding > 0:
+                curr_field = curr_field[self.padding:-self.padding, self.padding:-self.padding]
+
+            if self.image_case == 'Real':
+                self.image_widget.setImage(
+                    np.real(curr_field),
+                    )
+            elif self.image_case == 'Imaginary':
+                self.image_widget.setImage(
+                    np.imag(curr_field),
+                    )
+            elif self.image_case == 'Amplitude':
+                self.image_widget.setImage(
+                    np.abs(curr_field),
+                    )
+            elif self.image_case == 'Phase':
+                self.image_widget.setImage(
+                    np.angle(curr_field),
+                    )
+            #Set the colormap
+            self.image_widget.setColorMap(self.cmap)
+
+    def imgtofield_simple(
+                self,
+                img, 
+                G, 
+                polynomial, 
+                kx_add_ky,
+                masks = [],
+                ):
+        
+        #Scale image by its mean
+        img = np.array(img, dtype = np.float32) 
+        
+        #Compute the 2-dimensional discrete Fourier Transform with offset image.
+        fftImage = np.fft.fft2(img * np.exp(1j*(kx_add_ky)))
+
+        #shifted fourier image centered on peak values in x and y. 
+        fftImage = np.fft.fftshift(fftImage)
+        
+        #Shift the zero-frequency component to the center of the spectrum.
+        E_field = np.fft.ifft2(
+            np.fft.fftshift(fftImage * masks[0])
+        )
+        phase_img  = np.angle(E_field)
+        
+        # Get the phase background from phase image.
+        phase_background = P.correct_phase_4order(phase_img, G, polynomial)
+        E_field_corr = E_field * np.exp( -1j * phase_background)
             
-
-
+        return E_field_corr, phase_background
     
+    def get_field(self, image):
+         
+        _, _, _, _, _, G, polynomial, _, _, _, kx_add_ky, _, masks, _, _  = P.pre_calculations(
+        image, 
+        filter_radius = [], 
+        cropping = 0, 
+        mask_radie = [], 
+        case = 'ellipse', 
+        first_phase_background = 0,
+        mask_out = True)
+
+        self.field, _ = self.imgtofield_simple(
+                image, 
+                G, 
+                polynomial, 
+                kx_add_ky,
+                masks = masks,
+                )
+        
+    def on_click_cmap(self):
+        if self.cmap == pg.colormap.get('CET-L9'):
+            self.cmap = pg.colormap.get('CET-L1')
+            self.button2.setStyleSheet("background-color: green")
+        else:
+            self.cmap = pg.colormap.get('CET-L9')
+            self.button2.setStyleSheet("background-color: gray") 
+
+    def on_click_image_case(self):
+        self.image_case = self.sender().text()
+        self.button3.setStyleSheet("background-color: gray")
+        self.button4.setStyleSheet("background-color: gray")
+        self.button5.setStyleSheet("background-color: gray")
+        self.button6.setStyleSheet("background-color: gray")
+        self.sender().setStyleSheet("background-color: green")
 
 
+    def on_image_size_changed(self):
+        #Read value from text box. Allow positive and negative
+        try:
+            image_size = self.image_size_box.text()
+            image_size = image_size.replace('(', '')
+            image_size = image_size.replace(')', '')
+            image_size = image_size.split(',') 
+            image_size = [int(i) for i in image_size]
 
+            if len(image_size) == 2 and image_size[0] > 10 and image_size[1] > 10:
+                self.image_size = image_size
+        except:
+            pass
+    
+    def update_z_label(self):
+        self.z_label.setText("z = " + str(self.z))
+
+    #Stop the timer when the window is closed
+    def closeEvent(self, event):
+        gc.collect()
+        event.accept()

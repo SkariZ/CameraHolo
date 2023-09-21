@@ -9,16 +9,13 @@ import cv2 # Certain versions of this won't work
 
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication,
-    QLabel, QCheckBox, QComboBox, QListWidget, QLineEdit, QSpinBox,
-    QDoubleSpinBox, QSlider, QToolBar,
-    QPushButton, QVBoxLayout, QWidget, QFileDialog, QInputDialog
+    QLabel, QLineEdit,
+    QToolBar, QFileDialog, QInputDialog
 )
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot, QRunnable, QObject, QPoint, QRect, QTimer
-from PyQt6.QtGui import QPixmap, QImage, QPainter, QBrush, QColor, QAction, QDoubleValidator, QPen, QIntValidator
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
+from PyQt6.QtGui import QPixmap, QImage, QPainter, QColor, QAction, QDoubleValidator, QPen, QIntValidator
 
-from pyqtgraph import PlotWidget, plot
-import pyqtgraph as pg
 from random import randint
 import numpy as np
 from time import sleep
@@ -27,26 +24,13 @@ import gc
 
 
 import BaslerCameras
-#import ThorlabsCameras
 from CameraControlsNew import CameraThread, VideoWriterThread, CameraClicks
 from ControlParameters import default_c_p, get_data_dicitonary_new
-#from TemperatureControllerTED4015 import TemperatureThread
-#from TemperatureControllerWidget import TempereatureControllerWindow
-#from ReadPicUart import PicReader, PicWriter
-#from LivePlots import PlotWindow
 from SaveDataWidget import SaveDataWindow
 from DataAnalytics import DataAnalytics
 from FieldRecon import FieldAnalytics
 from FieldRecon_Z import FieldAnalyticsZ
-#from PIStage import PIStageThread
-#from PIStageWidget import PIStageWidget
-#import MotorControlWidget
-#from LaserPiezosControlWidget import LaserPiezoWidget, MinitweezersLaserMove
-#from DeepLearningThread import MouseAreaSelect, DeepLearningAnalyserLDS, DeepLearningControlWidget
-#from PlanktonViewWidget import PlanktonViewer
-#from DataChannelsInfoWindow import CurrentValueWindow
-#from ReadArduinoPortenta import PortentaComms
-#import AutoController
+
 
 
 class Worker(QThread):
@@ -184,6 +168,7 @@ class MainWindow(QMainWindow):
         self.c_p = default_c_p()
         self.data_channels = get_data_dicitonary_new()
         self.video_idx = 0
+        self.widgets = []
 
         # Start camera threads
         self.CameraThread = None
@@ -211,12 +196,10 @@ class MainWindow(QMainWindow):
        
         self.VideoWriterThread = VideoWriterThread(2, 'video thread', self.c_p)
         self.VideoWriterThread.start()
-        self.widgets = []
-
+        
         # Set up camera window. This is just how it looks once starting.
         H=int(1024/4)
         W=int(1024)
-        sleep(0.1)
 
         self.c_p['frame_size'] = int(self.c_p['camera_width']/2), int(self.c_p['camera_height']/2)
         self.label = QLabel("Hello")
@@ -511,17 +494,17 @@ class MainWindow(QMainWindow):
         print(x*self.c_p['image_scale'] ,y*self.c_p['image_scale'] )
         self.c_p['click_tools'][self.c_p['mouse_params'][5]].mouseDoubleClick()
 
-    def show_data_analytics_window(self, checked):
+    def show_data_analytics_window(self):
         self.data_analytics_window = DataAnalytics(self.c_p)
         self.data_analytics_window.show()
         self.widgets.append(self.data_analytics_window)
 
-    def show_field_analytics_window(self, checked):
+    def show_field_analytics_window(self):
         self.field_analytics_window = FieldAnalytics(self.c_p)
         self.field_analytics_window.show()
         self.widgets.append(self.field_analytics_window)
 
-    def show_field_analytics_window_z(self, checked):
+    def show_field_analytics_window_z(self):
         self.field_analytics_window_z = FieldAnalyticsZ(self.c_p)
         self.field_analytics_window_z.show()
         self.widgets.append(self.field_analytics_window_z)
@@ -530,10 +513,6 @@ class MainWindow(QMainWindow):
         self.data_window= SaveDataWindow(self.c_p, self.data_channels)
         self.data_window.show()
         self.widgets.append(self.data_window)
-
-    def closeEvent(self, event):
-        #Close all widgets
-        self.close_all_widgets()
 
     def close_all_widgets(self):
         #Close all widgets
@@ -556,11 +535,15 @@ class MainWindow(QMainWindow):
             try: widget.hide()
             except: pass
 
+            #Clear widgets if they exist
+            try: widget.clear()
+            except: pass
+
         self.widgets = []
 
         #Garbage Collector
         gc.collect()
-
+ 
     def __del__(self):
         self.c_p['program_running'] = False
         # TODO organize this better
@@ -583,12 +566,12 @@ def create_camera_toolbar_external(main_window):
     main_window.zoom_action.setCheckable(False)
 
     main_window.subtraction_action = QAction("Subtraction mode", main_window)
-    main_window.subtraction_action.setToolTip("Switches to subtraction mode.")
+    main_window.subtraction_action.setToolTip("Switches to subtraction mode.Only visually, does not affect the data.")
     main_window.subtraction_action.triggered.connect(main_window.SubtractionMode)
     main_window.subtraction_action.setCheckable(True)
 
-    main_window.highspeed_action = QAction("HighSpeed mode", main_window)
-    main_window.highspeed_action.setToolTip("Switches to high speed mode.")
+    main_window.highspeed_action = QAction("HighSpeed(ds) mode", main_window)
+    main_window.highspeed_action.setToolTip("Switches to high speed mode. Only visually, does not affect the data.")
     main_window.highspeed_action.triggered.connect(main_window.HighSpeedMode)
     main_window.highspeed_action.setCheckable(True)
 
@@ -640,12 +623,14 @@ def create_camera_toolbar_external(main_window):
 
     #First toolbar
     main_window.exposure_time_LineEdit = QLineEdit()
+    main_window.exposure_time_LineEdit.setFixedWidth(60)
     main_window.exposure_time_LineEdit.setText(str(main_window.c_p['exposure_time']))
     main_window.exposure_time_LineEdit.setValidator(QDoubleValidator(0.99,99.99, 2))
     main_window.camera_toolbar.addAction(main_window.set_exp_tim)
     main_window.camera_toolbar.addWidget(main_window.exposure_time_LineEdit)
     
     main_window.buffer_size_LineEdit = QLineEdit()
+    main_window.buffer_size_LineEdit.setFixedWidth(60)
     main_window.buffer_size_LineEdit.setValidator(QIntValidator(1,100))
     main_window.buffer_size_LineEdit.setText(str(main_window.c_p['buffer_size']))
     main_window.camera_toolbar.addAction(main_window.set_buffer_size)
@@ -655,10 +640,6 @@ def create_camera_toolbar_external(main_window):
     main_window.frame_rate_label = QLabel()
     main_window.frame_rate_label.setText("Frame rate: %d\n" % main_window.c_p['fps'])
     main_window.camera_toolbar_sec.addWidget(main_window.frame_rate_label)
-
-
-
-
 
 
 if __name__ == '__main__':

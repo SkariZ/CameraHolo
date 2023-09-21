@@ -242,8 +242,10 @@ class BaslerCamera(CameraInterface):
     def set_exposure_time(self, exposure_time):
         self.stop_grabbing()
         try:
-            self.cam.ExposureTime = exposure_time
-            self.cam2.ExposureTime = exposure_time
+            if self.num_cameras > 0:
+                self.cam.ExposureTime = exposure_time
+            elif self.num_cameras == 2:
+                self.cam2.ExposureTime = exposure_time
         except Exception as ex:
             print(f"Exposure time not accepted by camera, {ex}")
 
