@@ -98,8 +98,27 @@ class BaslerCamera(CameraInterface):
             else:
                 print("One of the two cameras failed to grab an image")
                 return None
-        #except TimeoutException as TE:
-        #    print(f"Warning, camera timed out {TE}")
+            
+    def set_burst_mode(self, mode):
+
+        #TODO - not yet working
+
+        if mode == 'On':
+            self.cam.TriggerSelector = "FrameBurstStart" # <== Selector first!
+            self.cam.TriggerSource = 'Software'
+            self.cam.TriggerMode = 'On'
+
+            if self.num_cameras == 2:
+                self.cam2.TriggerSelector = "FrameBurstStart"
+                self.cam2.TriggerSource = 'Software'
+                self.cam2.TriggerMode = 'On'
+
+                
+        if mode == 'Off':
+            self.cam.TriggerSelector = "AcquisitionStart"
+            if self.num_cameras == 2:
+                self.cam2.TriggerSelector = "AcquisitionStart"
+
 
     def connect_camera(self):
         try:
@@ -123,8 +142,10 @@ class BaslerCamera(CameraInterface):
                 print("Camera 2 is now open")
 
             self.num_cameras = len(devices)
+
             self.cam1_max_width = self.cam.Width.GetMax()
             self.cam1_max_height = self.cam.Height.GetMax()
+
             if self.num_cameras > 1:
                 self.cam2_max_width = self.cam2.Width.GetMax()
                 self.cam2_max_height = self.cam2.Height.GetMax()    
@@ -141,8 +162,9 @@ class BaslerCamera(CameraInterface):
         self.stop_grabbing()
         self.cam.Close()
         self.cam = None
-        self.cam2.Close()
-        self.cam2 = None
+        if self.num_cameras == 2:
+            self.cam2.Close()
+            self.cam2 = None
 
     def stop_grabbing(self):
         try:

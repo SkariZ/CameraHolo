@@ -172,6 +172,9 @@ class CameraThread(Thread):
         elif self.c_p['new_settings_camera'][1] == 'exposure_time':
             self.camera.set_exposure_time(self.c_p['exposure_time'])
 
+        elif self.c_p['new_settings_camera'][1] == 'burst_mode':
+            self.camera.set_burst_mode(self.c_p['burst_mode'])
+
         # Resetting the new_settings_camera parameter
         self.c_p['new_settings_camera'] = [False, None]
 

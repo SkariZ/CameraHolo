@@ -281,6 +281,15 @@ class MainWindow(QMainWindow):
             mode_action.setStatusTip(f"Set camera mode to {mode}")
             mode_action.triggered.connect(mode_command)
             mode_submenu.addAction(mode_action)
+        #Add a submenu for setting burst mode
+        burst_submenu = cemera_menu.addMenu("Burst mode")
+        burst_modes = ['Off', 'On']
+        for mode in burst_modes:
+            mode_command = partial(self.set_burst_mode, mode)
+            mode_action = QAction(mode, self)
+            mode_action.setStatusTip(f"Set burst mode to {mode}")
+            mode_action.triggered.connect(mode_command)
+            burst_submenu.addAction(mode_action)
 
         # Create a submenu for setting exact region of interest
         AOI_submenu = cemera_menu.addMenu("Set AOI")
@@ -416,6 +425,11 @@ class MainWindow(QMainWindow):
             AOI = [int(x) for x in AOI]
             self.c_p['AOI'] = AOI
             self.c_p['new_settings_camera'] = [True, 'AOI']
+
+    def set_burst_mode(self, mode):
+        # Updates the burst mode to what is inside the textbox
+        self.c_p['burst_mode'] = mode
+        self.c_p['new_settings_camera'] = [True, 'burst_mode']
 
     def set_save_path(self):
         fname = QFileDialog.getExistingDirectory(self, "Save path")
