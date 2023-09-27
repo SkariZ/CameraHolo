@@ -66,7 +66,7 @@ class FieldAnalyticsZ(QMainWindow):
         self.z_slider = QSlider(Qt.Orientation.Horizontal)
         self.z_slider.setMinimum(self.min_z)
         self.z_slider.setMaximum(self.max_z)
-        self.z_slider.setValue(0.0)
+        self.z_slider.setValue(self.z)
         self.z_slider.setTickInterval(self.interval_z)
         self.z_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.z_slider.setSingleStep(self.interval_z)

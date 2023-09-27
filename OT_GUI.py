@@ -4,7 +4,7 @@ Created on Wed Oct 19 15:50:13 2022
 
 @author: marti
 """
-import sys
+import sys, os
 import cv2 # Certain versions of this won't work
 
 from PyQt6.QtWidgets import (
@@ -342,6 +342,12 @@ class MainWindow(QMainWindow):
         save_data_action.triggered.connect(self.dump_data)
         file_menu.addAction(save_data_action)
 
+        #Add command to split written video into two videos(only works for avi and if recording is off and camera mode is both))
+        split_video_action = QAction("Split video", self)
+        split_video_action.setStatusTip("Split video into two videos")
+        split_video_action.triggered.connect(self.split_video)
+        file_menu.addAction(split_video_action) 
+
     def dump_data(self):
         text, ok = QInputDialog.getText(self, 'Filename dialog', 'Set name for data to be saved:')
         if not ok:
@@ -365,6 +371,77 @@ class MainWindow(QMainWindow):
             self.c_p['filename'] = text
             self.c_p['video_name'] = text + '_video' + str(self.video_idx)
             print(f"Filename is now {text}")
+
+    def split_video(self):
+        'Function that splits the video into two parts'
+        #Check so that recording is off
+        if self.c_p['recording']:
+            print("Can't split video while recording!")
+            return
+        
+        #Check so that camera mode is both
+        if self.c_p['camera_mode'] != 'both':
+            print("Can't split video unless camera mode is both!")
+            return
+        
+        #Check so that video format is avi or mp4
+        if self.c_p['video_format'] not in ['avi']:
+            print("Can't split video unless video format is avi!")
+            return
+        
+        #Check so that there is a video to split in the first place
+        if os.path.isfile(self.c_p['recording_path'] + '/' + self.c_p['video_name'] + '.' + self.c_p['video_format']):
+            print("Can't split video if there is no video to split!")
+            return
+        
+        #Read video
+        video_name = self.c_p['recording_path'] + '/' + self.c_p['video_name'] + '.' + self.c_p['video_format']
+        video_name1 = self.c_p['recording_path'] + '/' + self.c_p['video_name'] + '_1' + '.' + self.c_p['video_format']
+        video_name2 = self.c_p['recording_path'] + '/' + self.c_p['video_name'] + '_2' + '.' + self.c_p['video_format']
+
+        cap = cv2.VideoCapture(video_name)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration = frame_count/fps
+        print(f"Video has {frame_count} frames and a duration of {duration} seconds")
+
+        #Split video
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        width_new = int(width/2)
+        width1 = width_new
+        width2 = width - width_new
+
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        cap1 = cv2.VideoWriter(video_name1, fourcc, min(500, self.c_p['fps']),
+                                (height, width1), isColor=True)
+        cap2 = cv2.VideoWriter(video_name2, fourcc, min(500, self.c_p['fps']),
+                                (height, width2), isColor=True)
+        
+        for i in range(frame_count):
+            ret, frame = cap.read()
+            frame1 = frame[:, :width_new, :]
+            frame2 = frame[:, width_new:, :]
+            cap1.write(frame1)
+            cap2.write(frame2)
+        cap.release()
+        cap1.release()
+        cap2.release()
+        print("Video has been split!")
+
+        #Delete old video
+        os.remove(video_name)
+
+        #Garbage collector
+        gc.collect()
+
+        #Delete all variables 
+        del (cap, cap1, cap2, frame, frame1, 
+             frame2, fourcc, fps, frame_count, 
+             duration, height, height, width, 
+             width_new, width1, width2, video_name, 
+             video_name1, video_name2)
+
 
 
     def drop_down_window_menu(self):
