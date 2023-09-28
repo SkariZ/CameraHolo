@@ -82,7 +82,7 @@ class BaslerCamera(CameraInterface):
             self.img2.AttachGrabResultBuffer(result2)
 
             if result.GrabSucceeded() and result2.GrabSucceeded():
-                image1 = np.uint8(self.img.GetArray())
+                image1 = np.flipud(np.uint8(self.img.GetArray()))
                 image2 = np.uint8(self.img2.GetArray())
 
                 #If they are the same size, concatenate them horisontally.

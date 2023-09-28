@@ -57,7 +57,7 @@ class Worker(QThread):
         self.args = args
         self.kwargs = kwargs
         self.test_mode = test_mode
-        self.buffer = []
+        self.buffer = self.c_p['buffer']
 
     def preprocess_image(self):
         # Check if offset and gain should be applied.
@@ -67,20 +67,10 @@ class Worker(QThread):
         if self.c_p['image_gain'] != 1:
             # TODO unacceptably slow
             self.image = (self.image*self.c_p['image_gain'])
-
-        #Ensure that the image is uint8
         self.image = np.uint8(self.image)
 
     def subtraction_mode_image(self):
         "Subtracts the current image from the previous image in the buffer"
-        if len(self.buffer) < self.c_p['buffer_size'] and self.c_p['SubtractionMode']:
-            self.buffer.append(self.image)
-        else:
-            #pop n elements from the buffer depending on the buffer size
-            while len(self.buffer) >= self.c_p['buffer_size']:
-                self.buffer.pop(0)
-            self.buffer.append(self.image)
-            
         if self.c_p['SubtractionMode']:
             try:
                 self.image = self.buffer[-1].astype(np.float32) - np.mean(np.array(self.buffer).astype(np.float32)[:-1], axis=0)
@@ -92,8 +82,8 @@ class Worker(QThread):
     def high_speed_mode_image(self):
         "Downsamples the image to increase the frame rate"
         if self.c_p['HighSpeedMode_method']=='bin':
-            #self.image = self.image.reshape((self.image.shape[0]//2, 2, self.image.shape[1]//2, 2)).mean(3).mean(1)
-            self.image = self.image[::int(self.c_p['HighSpeedMode_ds']), ::int(self.c_p['HighSpeedMode_ds'])].astype(np.float32)
+            self.image = self.image.reshape((self.image.shape[0]//2, 2, self.image.shape[1]//2, 2)).mean(3).mean(1)
+            #self.image = self.image[::int(self.c_p['HighSpeedMode_ds']), ::int(self.c_p['HighSpeedMode_ds'])].astype(np.float32)
         else:
             self.image = cv2.resize(self.image, (0,0), fx=int(self.c_p['HighSpeedMode_ds']), fy=int(self.c_p['HighSpeedMode_ds']), interpolation=cv2.INTER_NEAREST).astype(np.float32)
     
@@ -145,7 +135,7 @@ class Worker(QThread):
 
             #Convert self.image into 0-255 range by normalizing
             if self.c_p['HighSpeedMode'] or self.c_p['SubtractionMode']:
-                self.image = (self.image - np.min(self.image))/(np.max(self.image) - np.min(self.image))*255
+                self.image = np.uint8((self.image - np.min(self.image))/(np.max(self.image) - np.min(self.image))*255)
 
             #Overlay image mode
             if self.c_p['Overlay_image_mode']:

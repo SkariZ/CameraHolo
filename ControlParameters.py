@@ -60,6 +60,7 @@ def default_c_p():
             #Settings for subtraction mode              
             'SubtractionMode':False,
             'buffer_size': 5,
+            'buffer': [],
 
             #Settings for HighSpeedMode
             'HighSpeedMode':False,

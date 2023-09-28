@@ -145,7 +145,6 @@ class CameraThread(Thread):
         self.tmp_width_cam1 = c_p['camera_width']
         self.tmp_width_cam2 = c_p['camera_width2']
         self.tmp_height_cam2 = c_p['camera_height2']
-
         self.c_p = c_p
 
         # TODO remove temporary solution
@@ -191,14 +190,26 @@ class CameraThread(Thread):
 
             #Here the image is captured. If two cameras are connected it will always read both.
             img=self.camera.capture_image()
+
+            if len(self.c_p['buffer']) < self.c_p['buffer_size'] and self.c_p['SubtractionMode']:
+                self.c_p['buffer'].append(img)
+            else:
+                #pop n elements from the buffer depending on the buffer size
+                while len(self.c_p['buffer']) >= self.c_p['buffer_size']:
+                    self.c_p['buffer'].pop(0)
+                self.c_p['buffer'].append(img)
             
+            #Camera 1
             if self.c_p['camera_mode'] == 'cam1':
                 if self.c_p['num_cameras']==2: 
                     self.c_p['image'] = img[:self.tmp_height_cam1, :self.tmp_width_cam1]
                 else:
                     self.c_p['image'] = img
+            #Camera 2
             elif self.c_p['camera_mode'] == 'cam2' and self.c_p['num_cameras']==2:
                 self.c_p['image'] = img[:self.tmp_height_cam2, self.tmp_width_cam1:]
+                
+            #Both cameras
             elif self.c_p['camera_mode'] == 'both' and self.c_p['num_cameras']==2:
                 self.c_p['image'] = img
 
