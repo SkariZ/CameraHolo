@@ -52,12 +52,13 @@ class BaslerCamera(CameraInterface):
         
         #Define the cameras to use
         if not self.is_grabbing:
+            self.is_grabbing = True
+
             self.cam.StartGrabbing(pylon.GrabStrategy_OneByOne)
 
             #Second camera if it exists
             if self.num_cameras > 1:
                 self.cam2.StartGrabbing(pylon.GrabStrategy_OneByOne) #basler2
-            self.is_grabbing = True
 
         #One camera
         if self.num_cameras == 1:
@@ -100,24 +101,45 @@ class BaslerCamera(CameraInterface):
                 return None
             
     def set_burst_mode(self, mode):
-
         #TODO - not yet working
 
+        #Stop grabbing
+        self.stop_grabbing()
+
         if mode == 'On':
-            self.cam.TriggerSelector = "FrameBurstStart" # <== Selector first!
-            self.cam.TriggerSource = 'Software'
-            self.cam.TriggerMode = 'On'
+            self.cam.MaxNumBuffer = 10
+            self.cam.TriggerSelector = "FrameBurstStart"
+            self.cam.TriggerMode = "On"
+            self.cam.TriggerSource = "Software"
+            self.cam.ExposureTime = 5000
+            self.cam.AcquisitionBurstFrameCount = 10
+            self.cam.BslAcquisitionBurstMode = "Standard"
 
             if self.num_cameras == 2:
+                self.cam2.MaxNumBuffer = 10
                 self.cam2.TriggerSelector = "FrameBurstStart"
-                self.cam2.TriggerSource = 'Software'
-                self.cam2.TriggerMode = 'On'
-
+                self.cam2.TriggerMode = "On"
+                self.cam2.TriggerSource = "Software"
+                self.cam2.ExposureTime = 5000
+                self.cam2.AcquisitionBurstFrameCount = 10
+                self.cam.BslAcquisitionBurstMode = "Standard"
                 
         if mode == 'Off':
-            self.cam.TriggerSelector = "AcquisitionStart"
+            #Resetting the camera
+            self.cam.MaxNumBuffer = 10
+            self.cam.TriggerSelector = "FrameStart"
+            self.cam.TriggerMode = "On"
+            self.cam.TriggerSource = "Software"
+            self.cam.ExposureTime = 5000
+            self.cam.AcquisitionBurstFrameCount = 1
+
             if self.num_cameras == 2:
-                self.cam2.TriggerSelector = "AcquisitionStart"
+                self.cam2.MaxNumBuffer = 10
+                self.cam2.TriggerSelector = "FrameStart"
+                self.cam2.TriggerMode = "On"
+                self.cam2.TriggerSource = "Software"
+                self.cam2.ExposureTime = 5000
+                self.cam2.AcquisitionBurstFrameCount = 1
 
 
     def connect_camera(self):
@@ -148,8 +170,7 @@ class BaslerCamera(CameraInterface):
 
             if self.num_cameras > 1:
                 self.cam2_max_width = self.cam2.Width.GetMax()
-                self.cam2_max_height = self.cam2.Height.GetMax()    
-            sleep(0.1)
+                self.cam2_max_height = self.cam2.Height.GetMax()
 
             return True
         
