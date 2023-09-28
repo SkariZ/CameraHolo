@@ -67,6 +67,8 @@ class Worker(QThread):
         if self.c_p['image_gain'] != 1:
             # TODO unacceptably slow
             self.image = (self.image*self.c_p['image_gain'])
+        
+        #Convert to uint8
         self.image = np.uint8(self.image)
 
     def subtraction_mode_image(self):
@@ -75,9 +77,7 @@ class Worker(QThread):
             try:
                 self.image = self.buffer[-1].astype(np.float32) - np.mean(np.array(self.buffer).astype(np.float32)[:-1], axis=0)
             except:
-                self.image = self.buffer[-1]
-        else:
-            self.image = self.buffer[-1]
+                pass
 
     def high_speed_mode_image(self):
         "Downsamples the image to increase the frame rate"
@@ -102,7 +102,7 @@ class Worker(QThread):
                 pad = np.zeros((image1.shape[0], image2.shape[1]-image1.shape[1]))
                 image1 = np.hstack((image1, pad))
             #Overlay images
-            self.image = cv2.addWeighted(image1, 0.5, image2, 0.5, 0)
+            self.image = cv2.addWeighted(image1, 0.35, image2, 0.65, 0)
 
     def run(self):
         # Initialize pens to draw on the images
