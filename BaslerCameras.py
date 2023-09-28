@@ -285,10 +285,8 @@ class BaslerCamera(CameraInterface):
     def set_exposure_time(self, exposure_time):
         self.stop_grabbing()
         try:
-            if self.num_cameras > 0:
-                self.cam.ExposureTime = exposure_time
-            elif self.num_cameras == 2:
-                self.cam2.ExposureTime = exposure_time
+            self.cam.ExposureTime = exposure_time
+            self.cam2.ExposureTime = exposure_time
         except Exception as ex:
             print(f"Exposure time not accepted by camera, {ex}")
 
@@ -297,7 +295,13 @@ class BaslerCamera(CameraInterface):
 
     def get_fps(self):
         fps = round(float(self.cam.ResultingFrameRate.GetValue()), 1)
-        return fps
+        fps2 = round(float(self.cam2.ResultingFrameRate.GetValue()), 1) if self.cam2 is not None else 0
+
+        if fps2 == 0:
+            return fps
+        else:
+            return round((fps + fps2) / 2, 1)
+
 
     def get_sensor_size(self):
 

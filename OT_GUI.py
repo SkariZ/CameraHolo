@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Oct 19 15:50:13 2022
+Graphical User Interface for camera. This is the main file that should be run.
 
-@author: marti
+//Fredrik
 """
 import sys, os
 import cv2 # Certain versions of this won't work
@@ -92,7 +92,8 @@ class Worker(QThread):
     def high_speed_mode_image(self):
         "Downsamples the image to increase the frame rate"
         if self.c_p['HighSpeedMode_method']=='bin':
-            self.image = self.image[::int(self.c_p['HighSpeedMode_ds']), ::int(self.c_p['HighSpeedMode_ds'])].astype(np.float32)
+            self.image = self.image.reshape((self.image.shape[0]//2, 2, self.image.shape[1]//2, 2)).mean(3).mean(1)
+            #self.image = self.image[::int(self.c_p['HighSpeedMode_ds']), ::int(self.c_p['HighSpeedMode_ds'])].astype(np.float32)
         else:
             self.image = cv2.resize(self.image, (0,0), fx=int(self.c_p['HighSpeedMode_ds']), fy=int(self.c_p['HighSpeedMode_ds']), interpolation=cv2.INTER_NEAREST).astype(np.float32)
 
@@ -155,6 +156,7 @@ class Worker(QThread):
             self.qp.end()
             self.changePixmap.emit(picture)
 
+            print(self.image.shape)
 
 class MainWindow(QMainWindow):
     """
@@ -299,6 +301,14 @@ class MainWindow(QMainWindow):
         AOI_action.triggered.connect(AOI_command)
         AOI_submenu.addAction(AOI_action)
 
+        # Create a submenu for showing actual frame size
+        frame_size_submenu = cemera_menu.addMenu("Print actual frame size")
+        frame_size_command = partial(self.print_actual_frame_size)
+        frame_size_action = QAction("Print actual frame size", self)
+        frame_size_action.setStatusTip("Print actual frame size")
+        frame_size_action.triggered.connect(frame_size_command)
+        frame_size_submenu.addAction(frame_size_action)
+
     def create_filemenu(self):
 
         file_menu = self.menu.addMenu("File")
@@ -394,39 +404,61 @@ class MainWindow(QMainWindow):
             print("Can't split video if there is no video to split!")
             return
         
+        #Check so that we have two cameras connected
+        if self.c_p['num_cameras'] != 2:
+            print("Can't split video if there is not two cameras connected!")
+            return
+
         #Read video
-        video_name = self.c_p['recording_path'] + '/' + self.c_p['video_name'] + '.' + self.c_p['video_format']
+        #Find the name of the video in recording path and video name
+        all_videos = os.listdir(self.c_p['recording_path'])
+        video_name = [video for video in all_videos if self.c_p['video_name'] in video and self.c_p['video_format'] in video]
+        if len(video_name) != 1:
+            print("Couldn't find video!")
+            return
+        
+        #Original video
+        video_name = self.c_p['recording_path'] + '/' + video_name[0]
+
+        #New videos
         video_name1 = self.c_p['recording_path'] + '/' + self.c_p['video_name'] + '_1' + '.' + self.c_p['video_format']
         video_name2 = self.c_p['recording_path'] + '/' + self.c_p['video_name'] + '_2' + '.' + self.c_p['video_format']
 
+        #Video info
         cap = cv2.VideoCapture(video_name)
         fps = cap.get(cv2.CAP_PROP_FPS)
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         duration = frame_count/fps
-        print(f"Video has {frame_count} frames and a duration of {duration} seconds")
-
-        #Split video
+        
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        print(f"Video has {frame_count} frames and a duration of {duration} seconds and a fps of {fps} and a width of {width} and a height of {height}")
+
+        #New sizes
         width_new = int(width/2)
         width1 = width_new
         width2 = width - width_new
 
         fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-        cap1 = cv2.VideoWriter(video_name1, fourcc, min(500, self.c_p['fps']),
-                                (height, width1), isColor=True)
-        cap2 = cv2.VideoWriter(video_name2, fourcc, min(500, self.c_p['fps']),
-                                (height, width2), isColor=True)
+
+        #Create new videos
+        writer1 = cv2.VideoWriter(video_name1, fourcc, min(500, self.c_p['fps']),
+                                (width1, height), isColor=False)
+        writer2 = cv2.VideoWriter(video_name2, fourcc, min(500, self.c_p['fps']),
+                                (width2, height), isColor=False)
         
         for i in range(frame_count):
             ret, frame = cap.read()
-            frame1 = frame[:, :width_new, :]
-            frame2 = frame[:, width_new:, :]
-            cap1.write(frame1)
-            cap2.write(frame2)
+            frame = frame[..., 0]
+            frame1 = frame[:, :width_new]
+            frame2 = frame[:, width_new:]
+            writer1.write(frame1)
+            writer2.write(frame2)
+
+        #Release everything    
         cap.release()
-        cap1.release()
-        cap2.release()
+        writer1.release()
+        writer2.release()
         print("Video has been split!")
 
         #Delete old video
@@ -436,14 +468,12 @@ class MainWindow(QMainWindow):
         gc.collect()
 
         #Delete all variables 
-        del (cap, cap1, cap2, frame, frame1, 
+        del (cap, writer1, writer2, frame, frame1, 
              frame2, fourcc, fps, frame_count, 
-             duration, height, height, width, 
+             duration, height, width, 
              width_new, width1, width2, video_name, 
              video_name1, video_name2)
-
-
-
+        
     def drop_down_window_menu(self):
         # Create windows drop down menu
         window_menu = self.menu.addMenu("Windows")
@@ -513,6 +543,9 @@ class MainWindow(QMainWindow):
         if len(fname) > 3:
             # If len is less than 3 then the action was cancelled and we should not update
             self.c_p['recording_path'] = fname
+
+    def print_actual_frame_size(self):
+        print(f"Actual frame size is {self.c_p['camera_width']}, {self.c_p['camera_height']}")
 
     def ZoomOut(self):
         self.c_p['AOI'] = [0, self.c_p['camera_width'], 0, self.c_p['camera_height']]

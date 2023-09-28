@@ -63,7 +63,7 @@ def default_c_p():
 
             #Settings for HighSpeedMode
             'HighSpeedMode':False,
-            'HighSpeedMode_ds': 4, #Downsampling factor
+            'HighSpeedMode_ds': 2, #Downsampling factor
             'HighSpeedMode_method':'bin', #'bin' is faster, 'avg' is more accurate
 
             #Settings Camera 1 or 2 (for dual camera mode) or both
