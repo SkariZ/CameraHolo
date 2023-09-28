@@ -92,10 +92,27 @@ class Worker(QThread):
     def high_speed_mode_image(self):
         "Downsamples the image to increase the frame rate"
         if self.c_p['HighSpeedMode_method']=='bin':
-            self.image = self.image.reshape((self.image.shape[0]//2, 2, self.image.shape[1]//2, 2)).mean(3).mean(1)
-            #self.image = self.image[::int(self.c_p['HighSpeedMode_ds']), ::int(self.c_p['HighSpeedMode_ds'])].astype(np.float32)
+            #self.image = self.image.reshape((self.image.shape[0]//2, 2, self.image.shape[1]//2, 2)).mean(3).mean(1)
+            self.image = self.image[::int(self.c_p['HighSpeedMode_ds']), ::int(self.c_p['HighSpeedMode_ds'])].astype(np.float32)
         else:
             self.image = cv2.resize(self.image, (0,0), fx=int(self.c_p['HighSpeedMode_ds']), fy=int(self.c_p['HighSpeedMode_ds']), interpolation=cv2.INTER_NEAREST).astype(np.float32)
+    
+    def overlay_image_mode(self):
+        'Overlays images on top of each other'
+        
+        #check if num_cameras is 2
+        if self.c_p['num_cameras'] != 2:
+            return
+        else:
+            #Split images into two
+            image1 = self.image[:, :self.image.shape[1]//2]
+            image2 = self.image[:, self.image.shape[1]//2:]
+            #Ensure the same size for both images, else pad
+            if image1.shape[1] != image2.shape[1]:
+                pad = np.zeros((image1.shape[0], image2.shape[1]-image1.shape[1]))
+                image1 = np.hstack((image1, pad))
+            #Overlay images
+            self.image = cv2.addWeighted(image1, 0.5, image2, 0.5, 0)
 
     def run(self):
         # Initialize pens to draw on the images
@@ -126,6 +143,14 @@ class Worker(QThread):
             if self.c_p['SubtractionMode']:
                 self.subtraction_mode_image()
 
+            #Convert self.image into 0-255 range by normalizing
+            if self.c_p['HighSpeedMode'] or self.c_p['SubtractionMode']:
+                self.image = (self.image - np.min(self.image))/(np.max(self.image) - np.min(self.image))*255
+
+            #Overlay image mode
+            if self.c_p['Overlay_image_mode']:
+                self.overlay_image_mode()
+
             # It is quite sensitive to the format here, won't accept any mismatch
             if len(np.shape(self.image)) < 3:
                 QT_Image = QImage(self.image, self.image.shape[1],
@@ -155,8 +180,6 @@ class Worker(QThread):
 
             self.qp.end()
             self.changePixmap.emit(picture)
-
-            print(self.image.shape)
 
 class MainWindow(QMainWindow):
     """
@@ -557,6 +580,9 @@ class MainWindow(QMainWindow):
     def HighSpeedMode(self):
         self.c_p['HighSpeedMode'] = not self.c_p['HighSpeedMode']
 
+    def OverlayImageMode(self):
+        self.c_p['Overlay_image_mode'] = not self.c_p['Overlay_image_mode']
+
     def get_fps(self):
         self.frame_rate_label.setText("Frame rate: %d\n" % self.c_p['fps'])
 
@@ -694,10 +720,15 @@ def create_camera_toolbar_external(main_window):
     main_window.subtraction_action.triggered.connect(main_window.SubtractionMode)
     main_window.subtraction_action.setCheckable(True)
 
-    main_window.highspeed_action = QAction("HighSpeed(ds) mode", main_window)
+    main_window.highspeed_action = QAction("Downsampling mode", main_window)
     main_window.highspeed_action.setToolTip("Switches to high speed mode. Only visually, does not affect the data.")
     main_window.highspeed_action.triggered.connect(main_window.HighSpeedMode)
     main_window.highspeed_action.setCheckable(True)
+
+    main_window.overlay_image_action = QAction("Overlay mode", main_window)
+    main_window.overlay_image_action.setToolTip("Switches to overlaying mode. Only visually, does not affect the data.")
+    main_window.overlay_image_action.triggered.connect(main_window.OverlayImageMode)
+    main_window.overlay_image_action.setCheckable(True)
 
     main_window.flush_action = QAction("Flush memory", main_window)
     main_window.flush_action.setToolTip("Flushes the memory(closes open widgets and clears data).")
@@ -738,6 +769,7 @@ def create_camera_toolbar_external(main_window):
     main_window.camera_toolbar.addAction(main_window.snapshot_action)
     main_window.camera_toolbar.addAction(main_window.subtraction_action)
     main_window.camera_toolbar.addAction(main_window.highspeed_action)
+    main_window.camera_toolbar.addAction(main_window.overlay_image_action)
     main_window.camera_toolbar.addAction(main_window.flush_action)
 
     #Add actions to second toolbar
