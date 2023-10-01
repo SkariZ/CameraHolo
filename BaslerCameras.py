@@ -26,6 +26,7 @@ class BaslerCamera(CameraInterface):
         self.cam1_max_height = 0
         self.cam2_max_width = 0
         self.cam2_max_height = 0
+        self.camerade_mode = None
 
     def capture_image(self):
         
@@ -109,6 +110,7 @@ class BaslerCamera(CameraInterface):
                 self.cam2_max_width = self.cam2.Width.GetMax()
                 self.cam2_max_height = self.cam2.Height.GetMax()
 
+            self.camera_mode = 'Basler'
             return True
         
         except:
@@ -117,6 +119,7 @@ class BaslerCamera(CameraInterface):
         if self.cam is None:
             try:
                 self.connect_camera_emulator()
+                self.camera_mode = 'Emulator'
                 print("Camera emulator is now open")
                 return True
             except Exception as ex:
@@ -152,27 +155,22 @@ class BaslerCamera(CameraInterface):
 
             self.num_cameras = len(devices)
 
-            #Set the max width and height of the cameras
-            self.cam.Width = 1024
-            self.cam.Height = 1024
-            self.cam.OffsetX = 0
-            self.cam.OffsetY = 0
+            self.cam1_max_width = self.cam.Width.GetMax()
+            self.cam1_max_height = self.cam.Height.GetMax()
             if self.num_cameras > 1:
-                self.cam2.Width = 1024
-                self.cam2.Height = 1024
-                self.cam2.OffsetX = 0
-                self.cam2.OffsetY = 0
+                self.cam2_max_width = self.cam2.Width.GetMax()
+                self.cam2_max_height = self.cam2.Height.GetMax()
 
             #Set gain and exposure time, pixel format, fps
             self.cam.Gain = 0
-            self.cam.ExposureTime = 10000
+            self.cam.ExposureTime = 1000
             self.cam.PixelFormat = "Mono12"
             self.cam.AcquisitionFrameRateEnable = True
             self.cam.AcquisitionFrameRate = 60
 
             if self.num_cameras > 1:
                 self.cam2.Gain = 0
-                self.cam2.ExposureTime = 10000
+                self.cam2.ExposureTime = 1000
                 self.cam2.PixelFormat = "Mono12"
                 self.cam2.AcquisitionFrameRateEnable = True
                 self.cam2.AcquisitionFrameRate = 60
@@ -208,8 +206,9 @@ class BaslerCamera(CameraInterface):
             self.cam.TriggerSelector = "FrameBurstStart"
             self.cam.TriggerMode = "On"
             self.cam.TriggerSource = "Software"
+            self.cam.TriggerActivation = "RisingEdge"
             self.cam.ExposureTime = 5000
-            self.cam.AcquisitionBurstFrameCount = 10
+            self.cam.AcquisitionBurstFrameCount = 100
             self.cam.BslAcquisitionBurstMode = "Standard"
 
             if self.num_cameras == 2:
@@ -218,25 +217,11 @@ class BaslerCamera(CameraInterface):
                 self.cam2.TriggerMode = "On"
                 self.cam2.TriggerSource = "Software"
                 self.cam2.ExposureTime = 5000
-                self.cam2.AcquisitionBurstFrameCount = 10
+                self.cam2.AcquisitionBurstFrameCount = 100
                 self.cam.BslAcquisitionBurstMode = "Standard"
                 
         if mode == 'Off':
-            #Resetting the camera
-            self.cam.MaxNumBuffer = 10
-            self.cam.TriggerSelector = "FrameStart"
-            self.cam.TriggerMode = "On"
-            self.cam.TriggerSource = "Software"
-            self.cam.ExposureTime = 5000
-            self.cam.AcquisitionBurstFrameCount = 1
-
-            if self.num_cameras == 2:
-                self.cam2.MaxNumBuffer = 10
-                self.cam2.TriggerSelector = "FrameStart"
-                self.cam2.TriggerMode = "On"
-                self.cam2.TriggerSource = "Software"
-                self.cam2.ExposureTime = 5000
-                self.cam2.AcquisitionBurstFrameCount = 1
+            self.connect_camera()
 
     def set_AOI(self, AOI):
         '''
