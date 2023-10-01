@@ -73,6 +73,7 @@ def default_c_p():
             #Settings Camera 1 or 2 (for dual camera mode) or both
             'camera_mode': 'cam1',
             'num_cameras': 1, #Will be updated when camera is connected
+
             'burst_mode': False, 
 
            # Deep learning tracking

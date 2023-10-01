@@ -31,8 +31,6 @@ from DataAnalytics import DataAnalytics
 from FieldRecon import FieldAnalytics
 from FieldRecon_Z import FieldAnalyticsZ
 
-
-
 class Worker(QThread):
     '''
     Worker thread
@@ -296,6 +294,7 @@ class MainWindow(QMainWindow):
             mode_action.setStatusTip(f"Set camera mode to {mode}")
             mode_action.triggered.connect(mode_command)
             mode_submenu.addAction(mode_action)
+
         #Add a submenu for setting burst mode
         burst_submenu = cemera_menu.addMenu("Burst mode")
         burst_modes = ['Off', 'On']
@@ -558,7 +557,7 @@ class MainWindow(QMainWindow):
             self.c_p['recording_path'] = fname
 
     def print_actual_frame_size(self):
-        print(f"Actual frame size is {self.c_p['camera_width']}, {self.c_p['camera_height']}")
+        print(f"Actual frame size is {self.c_p['image'].shape[0]}, {self.c_p['image'].shape[1]}")
 
     def ZoomOut(self):
         self.c_p['AOI'] = [0, self.c_p['camera_width'], 0, self.c_p['camera_height']]

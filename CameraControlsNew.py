@@ -148,8 +148,8 @@ class CameraThread(Thread):
         self.c_p = c_p
 
         # TODO remove temporary solution
-        self.camera.cam.AcquisitionFrameRateEnable = False
-        print("Framrate ", self.camera.cam.ResultingFrameRate())
+        #self.camera.cam.AcquisitionFrameRateEnable = False
+        #print("Framrate ", self.camera.cam.ResultingFrameRate())
         
         # Zoom out
         self.c_p['AOI'] = [0, self.c_p['camera_width'], 0,
@@ -173,7 +173,7 @@ class CameraThread(Thread):
 
         elif self.c_p['new_settings_camera'][1] == 'burst_mode':
             self.camera.set_burst_mode(self.c_p['burst_mode'])
-
+        
         # Resetting the new_settings_camera parameter
         self.c_p['new_settings_camera'] = [False, None]
 

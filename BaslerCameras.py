@@ -27,27 +27,6 @@ class BaslerCamera(CameraInterface):
         self.cam2_max_width = 0
         self.cam2_max_height = 0
 
-    '''
-    def capture_image(self):
-        
-        if not self.is_grabbing:
-            self.cam.StartGrabbing(pylon.GrabStrategy_OneByOne)
-            self.is_grabbing = True
-        try:
-            
-            with self.cam.RetrieveResult(3000) as result: # 3000
-
-                self.img.AttachGrabResultBuffer(result)
-                if result.GrabSucceeded():
-                    # Consider if we need to put directly in c_p?
-                    #image = np.uint8(self.img.GetArray()[:1024,:1024])
-                    image = np.uint8(self.img.GetArray())    
-                    #self.img.Release()
-                    
-                    return image
-        except TimeoutException as TE:
-            print(f"Warning, camera timed out {TE}")
-    '''
     def capture_image(self):
         
         #Define the cameras to use
@@ -99,7 +78,125 @@ class BaslerCamera(CameraInterface):
             else:
                 print("One of the two cameras failed to grab an image")
                 return None
+
+    def connect_camera(self):
+        try:
+            tlf = pylon.TlFactory.GetInstance()
+            devices = tlf.EnumerateDevices()
             
+            #No camera found
+            if len(devices) == 0:
+                self.cam = None
+                raise pylon.RuntimeException("No camera present.")
+    
+            # Adding first camera
+            if len(devices) > 0:
+                self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[0]))
+                self.cam.Open()
+                print("Camera 1 is now open")
+            
+            if len(devices) > 1:
+                self.cam2 = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[1]))
+                self.cam2.Open()
+                print("Camera 2 is now open")
+
+            self.num_cameras = len(devices)
+
+            self.cam1_max_width = self.cam.Width.GetMax()
+            self.cam1_max_height = self.cam.Height.GetMax()
+
+            if self.num_cameras > 1:
+                self.cam2_max_width = self.cam2.Width.GetMax()
+                self.cam2_max_height = self.cam2.Height.GetMax()
+
+            return True
+        
+        except:
+            print("No camera found")
+
+        if self.cam is None:
+            try:
+                self.connect_camera_emulator()
+                print("Camera emulator is now open")
+                return True
+            except Exception as ex:
+                print(ex)
+                return False
+
+    def connect_camera_emulator(self, n_cameras=2):
+
+        if n_cameras != 'Off' and int(n_cameras) > 0:
+            import os
+            os.environ["PYLON_CAMEMU"] = f"{n_cameras}"
+
+            tlf = pylon.TlFactory.GetInstance()
+            devices = tlf.EnumerateDevices()
+            
+            print(f"Found {len(devices)} cameras")
+
+            #No camera found
+            if len(devices) == 0:
+                self.cam = None
+                raise pylon.RuntimeException("No camera present.")
+
+            # Adding first camera
+            if len(devices) > 0:
+                self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[0]))
+                self.cam.Open()
+                print("Camera 1 is now open")
+            
+            if len(devices) > 1:
+                self.cam2 = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[1]))
+                self.cam2.Open()
+                print("Camera 2 is now open")
+
+            self.num_cameras = len(devices)
+
+            #Set the max width and height of the cameras
+            self.cam.Width = 1024
+            self.cam.Height = 1024
+            self.cam.OffsetX = 0
+            self.cam.OffsetY = 0
+            if self.num_cameras > 1:
+                self.cam2.Width = 1024
+                self.cam2.Height = 1024
+                self.cam2.OffsetX = 0
+                self.cam2.OffsetY = 0
+
+            #Set gain and exposure time, pixel format, fps
+            self.cam.Gain = 0
+            self.cam.ExposureTime = 10000
+            self.cam.PixelFormat = "Mono12"
+            self.cam.AcquisitionFrameRateEnable = True
+            self.cam.AcquisitionFrameRate = 60
+
+            if self.num_cameras > 1:
+                self.cam2.Gain = 0
+                self.cam2.ExposureTime = 10000
+                self.cam2.PixelFormat = "Mono12"
+                self.cam2.AcquisitionFrameRateEnable = True
+                self.cam2.AcquisitionFrameRate = 60
+
+            return True
+        
+
+
+    def disconnect_camera(self):
+        self.stop_grabbing()
+        self.cam.Close()
+        self.cam = None
+        if self.num_cameras == 2:
+            self.cam2.Close()
+            self.cam2 = None
+
+    def stop_grabbing(self):
+        try:
+            self.cam.StopGrabbing()
+            self.cam2.StopGrabbing()
+        except:
+            pass
+        self.is_grabbing = False
+    
     def set_burst_mode(self, mode):
         #TODO - not yet working
 
@@ -141,60 +238,6 @@ class BaslerCamera(CameraInterface):
                 self.cam2.ExposureTime = 5000
                 self.cam2.AcquisitionBurstFrameCount = 1
 
-
-    def connect_camera(self):
-        try:
-            tlf = pylon.TlFactory.GetInstance()
-            devices = tlf.EnumerateDevices()
-            
-            #No camera found
-            if len(devices) == 0:
-                self.cam = None
-                raise pylon.RuntimeException("No camera present.")
-    
-            # Adding first camera
-            if len(devices) > 0:
-                self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[0]))
-                self.cam.Open()
-                print("Camera 1 is now open")
-            
-            if len(devices) > 1:
-                self.cam2 = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateDevice(devices[1]))
-                self.cam2.Open()
-                print("Camera 2 is now open")
-
-            self.num_cameras = len(devices)
-
-            self.cam1_max_width = self.cam.Width.GetMax()
-            self.cam1_max_height = self.cam.Height.GetMax()
-
-            if self.num_cameras > 1:
-                self.cam2_max_width = self.cam2.Width.GetMax()
-                self.cam2_max_height = self.cam2.Height.GetMax()
-
-            return True
-        
-        except Exception as ex:
-            self.cam = None
-            print(ex)
-            return False
-        
-    def disconnect_camera(self):
-        self.stop_grabbing()
-        self.cam.Close()
-        self.cam = None
-        if self.num_cameras == 2:
-            self.cam2.Close()
-            self.cam2 = None
-
-    def stop_grabbing(self):
-        try:
-            self.cam.StopGrabbing()
-            self.cam2.StopGrabbing()
-        except:
-            pass
-        self.is_grabbing = False
-    
     def set_AOI(self, AOI):
         '''
         Function that sets the region of interest of the camera.
