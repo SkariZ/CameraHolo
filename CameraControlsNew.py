@@ -147,8 +147,9 @@ class CameraThread(Thread):
         self.tmp_height_cam2 = c_p['camera_height2']
         self.c_p = c_p
 
-        #self.camera.cam.AcquisitionFrameRateEnable = False
-        #print("Framrate ", self.camera.cam.ResultingFrameRate())
+        if self.camera.cameratype =='Basler':
+            self.camera.cam.AcquisitionFrameRateEnable = False
+            print("Framrate ", self.camera.cam.ResultingFrameRate())
         
         # Zoom out
         self.c_p['AOI'] = [0, self.c_p['camera_width'], 0,
@@ -170,7 +171,7 @@ class CameraThread(Thread):
         elif self.c_p['new_settings_camera'][1] == 'exposure_time':
             self.camera.set_exposure_time(self.c_p['exposure_time'])
 
-        elif self.c_p['new_settings_camera'][1] == 'burst_mode' and self.camera.camera_mode =='Basler':
+        elif self.c_p['new_settings_camera'][1] == 'burst_mode' and self.camera.cameratype =='Basler':
             self.camera.set_burst_mode(self.c_p['burst_mode'])
         
         # Resetting the new_settings_camera parameter

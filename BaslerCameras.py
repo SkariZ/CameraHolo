@@ -26,7 +26,7 @@ class BaslerCamera(CameraInterface):
         self.cam1_max_height = 0
         self.cam2_max_width = 0
         self.cam2_max_height = 0
-        self.camerade_mode = None
+        self.cameratype = 'Basler' if self.num_cameras > 0 else 'Emulator'
 
     def capture_image(self):
         
@@ -109,8 +109,6 @@ class BaslerCamera(CameraInterface):
             if self.num_cameras > 1:
                 self.cam2_max_width = self.cam2.Width.GetMax()
                 self.cam2_max_height = self.cam2.Height.GetMax()
-
-            self.camera_mode = 'Basler'
             return True
         
         except:
@@ -119,7 +117,6 @@ class BaslerCamera(CameraInterface):
         if self.cam is None:
             try:
                 self.connect_camera_emulator()
-                self.camera_mode = 'Emulator'
                 print("Camera emulator is now open")
                 return True
             except Exception as ex:
