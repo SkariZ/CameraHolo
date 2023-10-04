@@ -168,7 +168,7 @@ class CameraThread(Thread):
             self.tmp_width_cam2 = self.c_p['AOI'][1] - self.c_p['AOI'][0]
             self.tmp_height_cam2 = self.c_p['AOI'][3] - self.c_p['AOI'][2]
 
-        elif self.c_p['new_settings_camera'][1] == 'exposure_time':
+        elif self.c_p['new_settings_camera'][1] == 'exposure_time' and self.camera.cameratype =='Basler':
             self.camera.set_exposure_time(self.c_p['exposure_time'])
 
         elif self.c_p['new_settings_camera'][1] == 'burst_mode' and self.camera.cameratype =='Basler':
@@ -178,7 +178,9 @@ class CameraThread(Thread):
         self.c_p['new_settings_camera'] = [False, None]
 
     def run(self):
-        self.c_p['exposure_time'] = self.camera.get_exposure_time()
+
+        if self.camera.cameratype =='Basler':
+            self.c_p['exposure_time'] = self.camera.get_exposure_time()
 
         count = 0
         while self.c_p['program_running']:
