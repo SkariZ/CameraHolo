@@ -173,6 +173,9 @@ class CameraThread(Thread):
 
         elif self.c_p['new_settings_camera'][1] == 'burst_mode' and self.camera.cameratype =='Basler':
             self.camera.set_burst_mode(self.c_p['burst_mode'])
+
+        elif self.c_p['new_settings_camera'][1] == 'fps' and self.camera.cameratype =='Basler' and self.c_p['fps'] is not None:
+            self.camera.set_fps(self.c_p['fps'])
         
         # Resetting the new_settings_camera parameter
         self.c_p['new_settings_camera'] = [False, None]

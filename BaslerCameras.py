@@ -174,13 +174,24 @@ class BaslerCamera(CameraInterface):
 
             return True
         
+    def set_fps(self, fps):
+        self.stop_grabbing()
+        try:
+            self.cam.AcquisitionFrameRateEnable = True
+            self.cam.AcquisitionFrameRate = fps
 
+            if self.num_cameras > 1:
+                self.cam2.AcquisitionFrameRateEnable = True
+                self.cam2.AcquisitionFrameRate = fps
+
+        except Exception as ex:
+            print(f"FPS not accepted by camera, {ex}")
 
     def disconnect_camera(self):
         self.stop_grabbing()
         self.cam.Close()
         self.cam = None
-        if self.num_cameras == 2:
+        if self.num_cameras > 1:
             self.cam2.Close()
             self.cam2 = None
 
@@ -311,7 +322,8 @@ class BaslerCamera(CameraInterface):
         self.stop_grabbing()
         try:
             self.cam.ExposureTime = exposure_time
-            self.cam2.ExposureTime = exposure_time
+            if self.num_cameras > 1:
+                self.cam2.ExposureTime = exposure_time
         except Exception as ex:
             print(f"Exposure time not accepted by camera, {ex}")
 

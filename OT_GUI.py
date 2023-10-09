@@ -550,6 +550,11 @@ class MainWindow(QMainWindow):
         self.c_p['burst_mode'] = mode
         self.c_p['new_settings_camera'] = [True, 'burst_mode']
 
+    def set_fps_text(self):
+        # Updates the fps of the camera to what is inside the textbox
+        self.c_p['fps'] = int(self.fps_LineEdit.text())
+        self.c_p['new_settings_camera'] = [True, 'fps']
+
     def set_save_path(self):
         fname = QFileDialog.getExistingDirectory(self, "Save path")
         if len(fname) > 3:
@@ -747,8 +752,14 @@ def create_camera_toolbar_external(main_window):
     main_window.set_buffer_size.setToolTip("Sets buffer size to use when in subtraction mode")
     main_window.set_buffer_size.triggered.connect(main_window.set_buffer_size_text)
 
+    #Window for setting fps
+    main_window.set_fps = QAction("Set fps", main_window)
+    main_window.set_fps.setToolTip("Sets fps to the value in the textboox")
+    main_window.set_fps.triggered.connect(main_window.set_fps_text)
+
+    #Window for getting fps
     main_window.get_frame_rate = QAction("FPS", main_window)
-    main_window.get_frame_rate.setToolTip("Update FPS.")
+    main_window.get_frame_rate.setToolTip("Show actual FPS.")
     main_window.get_frame_rate.triggered.connect(main_window.get_fps)
     main_window.get_frame_rate.setCheckable(False)
 
@@ -781,11 +792,17 @@ def create_camera_toolbar_external(main_window):
     main_window.camera_toolbar.addAction(main_window.set_buffer_size)
     main_window.camera_toolbar.addWidget(main_window.buffer_size_LineEdit)
 
+    main_window.fps_LineEdit = QLineEdit()
+    main_window.fps_LineEdit.setFixedWidth(60)
+    main_window.fps_LineEdit.setValidator(QIntValidator(1,10000))
+    main_window.fps_LineEdit.setText(str(main_window.c_p['fps']))
+    main_window.camera_toolbar.addAction(main_window.set_fps)
+    main_window.camera_toolbar.addWidget(main_window.fps_LineEdit)
+
     #Secondary toolbar
     main_window.frame_rate_label = QLabel()
     main_window.frame_rate_label.setText("Frame rate: %d\n" % main_window.c_p['fps'])
     main_window.camera_toolbar_sec.addWidget(main_window.frame_rate_label)
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
