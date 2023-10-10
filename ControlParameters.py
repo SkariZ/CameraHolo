@@ -30,8 +30,6 @@ def default_c_p():
            'image_idx': 0, # Index of snapshot image, add also video idx maybe.
            'color': "mono",  # Options are mono and color # Maybe add bit depth too
            'new_settings_camera': [False, None],
-           'fps' : None,
-
             # Camera sizes. These are the default values for the Basler camera
 
             #Camera 1
@@ -44,7 +42,7 @@ def default_c_p():
 
            'recording': False,
            'exposure_time': 5000,
-           'fps': 50,  # Frames per second of camera
+           'fps': 200,  # Frames per second of camera
            'filename': '',
            'video_name': 'Video',
            'video_format': 'avi',
