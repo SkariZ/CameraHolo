@@ -162,9 +162,6 @@ if __name__ == '__main__':
 
         print(f'ResultingFrameRate: {actual_framerate} fps')
 
-
-
-
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'MJPG')
     shape = captured_images[0].shape
