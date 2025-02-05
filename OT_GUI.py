@@ -169,6 +169,7 @@ class Worker(QThread):
             self.qp.end()
             self.changePixmap.emit(picture)
 
+
 class MainWindow(QMainWindow):
     """
     Main window of the program. It contains the menu bar and the main widget.
@@ -211,8 +212,8 @@ class MainWindow(QMainWindow):
         self.VideoWriterThread.start()
         
         # Set up camera window. This is just how it looks once starting.
-        H=int(1024/4)
-        W=int(1024)
+        H = int(1024/4)
+        W = int(1024)
 
         self.c_p['frame_size'] = int(self.c_p['camera_width']/2), int(self.c_p['camera_height']/2)
         self.label = QLabel("Hello")
@@ -331,7 +332,7 @@ class MainWindow(QMainWindow):
         video_formats = ['avi','mp4','npy']
 
         for f in video_formats :
-            format_command= partial(self.set_video_format, f)
+            format_command = partial(self.set_video_format, f)
             format_action = QAction(f, self)
             format_action.setStatusTip(f"Set recording format to {f}")
             format_action.triggered.connect(format_command)
@@ -341,7 +342,7 @@ class MainWindow(QMainWindow):
         image_format_submenu = file_menu.addMenu("Image format")
         image_formats = ['png','jpg','npy']
         for f in image_formats:
-            format_command= partial(self.set_image_format, f)
+            format_command = partial(self.set_image_format, f)
             format_action = QAction(f, self)
             format_action.setStatusTip(f"Set recording format to {f}")
             format_action.triggered.connect(format_command)
@@ -654,7 +655,7 @@ class MainWindow(QMainWindow):
         self.widgets.append(self.field_analytics_window_z)
 
     def DataWindow(self):
-        self.data_window= SaveDataWindow(self.c_p, self.data_channels)
+        self.data_window = SaveDataWindow(self.c_p, self.data_channels)
         self.data_window.show()
         self.widgets.append(self.data_window)
 
@@ -683,6 +684,7 @@ class MainWindow(QMainWindow):
             try: widget.clear()
             except: pass
 
+        #Clear widgets
         self.widgets = []
 
         #Garbage Collector

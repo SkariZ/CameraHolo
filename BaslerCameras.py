@@ -21,7 +21,7 @@ class BaslerCamera(CameraInterface):
         self.img2 = pylon.PylonImage()
         self.cam = None
         self.cam2 = None
-        self.num_cameras =  len(pylon.TlFactory.GetInstance().EnumerateDevices())
+        self.num_cameras = len(pylon.TlFactory.GetInstance().EnumerateDevices())
         self.cam1_max_width = 0
         self.cam1_max_height = 0
         self.cam2_max_width = 0
@@ -67,12 +67,12 @@ class BaslerCamera(CameraInterface):
 
                 #If they are the same size, concatenate them horisontally.
                 if image1.shape == image2.shape:
-                    image = np.concatenate((image1, image2), axis = 1)
+                    image = np.concatenate((image1, image2), axis=1)
                 #If they are not the same size, make them the same size and concatenate them horisontally.
                 else:
                     image = np.zeros((max(image1.shape[0], image2.shape[0]), image1.shape[1]+image2.shape[1]))
                     image[0:image1.shape[0], 0:image1.shape[1]] = image1
-                    image[0:image2.shape[0], image1.shape[1]:image1.shape[1]+image2.shape[1]] = image2
+                    image[0:image2.shape[0], image1.shape[1]:image1.shape[1] + image2.shape[1]] = image2
 
                 return image
             #exception if one of the cameras fail
@@ -347,7 +347,7 @@ class BaslerCamera(CameraInterface):
             height = int(self.cam.Height.GetMax())
 
         if self.num_cameras > 1:
-            width2 =  int(self.cam2.Width.GetMax())
+            width2 = int(self.cam2.Width.GetMax())
             height2 = int(self.cam2.Height.GetMax())
         else:
             width2 = 0
